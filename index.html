@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Fabrique de Ménesplet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Cormorant+Garamond:ital@0;1&display=swap');
+
+  :root{
+    --paper: #ece5d8;
+    --ink: #2c2620;
+    --rust: #9c4a2e;
+    --line: #b9ac93;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    height: 100%;
+    margin: 0;
+  }
+
+  body{
+    background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(0,0,0,0.03), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(0,0,0,0.04), transparent 60%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+  }
+
+  .seal{
+    position: relative;
+    padding: 4.5rem 4rem;
+    text-align: center;
+    border: 1.5px solid var(--ink);
+    outline: 1px solid var(--ink);
+    outline-offset: 8px;
+  }
+
+  .eyebrow{
+    font-size: 0.72rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin: 0 0 1.1rem;
+  }
+
+  h1{
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2.4rem, 6vw, 4.4rem);
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+
+  h1 em{
+    font-style: italic;
+    font-weight: 400;
+    color: var(--rust);
+  }
+
+  .rule{
+    width: 64px;
+    height: 1px;
+    background: var(--line);
+    margin: 1.4rem auto;
+  }
+
+  .baseline{
+    font-size: 0.95rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.6;
+    margin: 0;
+  }
+
+  @media (max-width: 480px){
+    .seal{
+      padding: 3rem 1.6rem;
+      outline-offset: 5px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="seal">
+    <p class="eyebrow">Établissement fondé au village</p>
+    <h1>La <em>Fabrique</em><br>de Ménesplet</h1>
+    <div class="rule"></div>
+    <p class="baseline">Dordogne — France</p>
+  </div>
+
+</body>
+</html>
