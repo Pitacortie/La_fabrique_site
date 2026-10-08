@@ -1,0 +1,359 @@
+// Modèle de données de La Fabrique de Ménesplet (cahier des charges v0.9, section 9).
+// Phase 1 : adhésions, membres, textes acceptés, cotisations, contenus, actualités.
+// Le SEL (annonces, messagerie, briques) viendra en phase 2 ; l'alias est déjà en place.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Énumérations ----------
+
+enum StatutDemande {
+  EN_ATTENTE
+  VALIDEE
+  REFUSEE
+  CLASSEE_SANS_SUITE
+}
+
+enum StatutMembre {
+  EN_ATTENTE_ACTIVATION // compte créé, mot de passe pas encore choisi
+  ACTIF
+  SUSPENDU
+  CLOTURE
+}
+
+// Statuts, art. 7
+enum CategorieMembre {
+  FONDATEUR
+  ACTIF
+  ADHERENT
+  BIENFAITEUR
+}
+
+// Droits sur le site. BUREAU inclut les droits ADMINISTRATEUR.
+enum Role {
+  ADHERENT
+  ADMINISTRATEUR
+  BUREAU
+}
+
+enum ModeReglement {
+  CHEQUE
+  ESPECES
+  VIREMENT
+  WERO_PAYLIB
+}
+
+enum TypeTexte {
+  STATUTS
+  REGLEMENT_INTERIEUR
+  CHARTE_NEUTRALITE
+  BULLETIN_ADHESION
+  CHARTE_SEL
+  REGLEMENT_SEL
+}
+
+enum TypeJeton {
+  ACTIVATION
+  REINITIALISATION
+}
+
+enum StatutArticle {
+  BROUILLON
+  PUBLIE
+  RETIRE
+}
+
+enum StatutMessage {
+  NOUVEAU
+  EN_COURS
+  TRAITE
+}
+
+// ---------- Adhésion ----------
+
+// ADH-1 à ADH-4 : une demande ne crée ni compte ni mot de passe.
+model DemandeAdhesion {
+  id String @id @default(cuid())
+
+  email         String
+  nom           String
+  prenom        String
+  dateNaissance DateTime @db.Date
+  adresse       String
+  codePostal    String
+  commune       String
+  telephone     String
+
+  // Bloc mineurs (obligatoire si moins de 18 ans)
+  responsableNom       String?
+  responsableLien      String?
+  responsableTelephone String?
+
+  droitImage     Boolean
+  montantPropose Decimal       @db.Decimal(8, 2)
+  modeReglement  ModeReglement
+
+  consentementLeveeAnonymat Boolean // ADH-3
+  certifieLe                DateTime // case « vaut signature électronique »
+  consentementRgpdLe        DateTime
+
+  statut      StatutDemande @default(EN_ATTENTE)
+  motifRefus  String?
+  decideLe    DateTime?
+  decidePar   Membre?       @relation("DemandesDecidees", fields: [decideParId], references: [id])
+  decideParId String?
+
+  membre   Membre? @relation("DemandeDuMembre", fields: [membreId], references: [id])
+  membreId String? @unique
+
+  acceptations Acceptation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut, createdAt])
+  @@index([email])
+}
+
+// ---------- Membres et identité ----------
+
+// Identité privée : visible uniquement des administrateurs habilités (section 6.2).
+model Membre {
+  id    String @id @default(cuid())
+  email String @unique
+
+  motDePasseHash String?
+
+  nom           String
+  prenom        String
+  dateNaissance DateTime? @db.Date
+  adresse       String?
+  codePostal    String?
+  commune       String?
+  telephone     String?
+
+  responsableNom       String?
+  responsableLien      String?
+  responsableTelephone String?
+
+  droitImage Boolean @default(false)
+
+  categorie    CategorieMembre @default(ADHERENT)
+  dateAgrement DateTime?
+  statut       StatutMembre    @default(EN_ATTENTE_ACTIVATION)
+  motifStatut  String?
+  role         Role            @default(ADHERENT)
+  peutPublier  Boolean         @default(false) // mandaté pour publier (ADM-18)
+
+  alias Alias?
+
+  demande          DemandeAdhesion?  @relation("DemandeDuMembre")
+  demandesDecidees DemandeAdhesion[] @relation("DemandesDecidees")
+
+  acceptations       Acceptation[]
+  cotisations        Cotisation[]       @relation("CotisationsDuMembre")
+  cotisationsSaisies Cotisation[]       @relation("CotisationsSaisies")
+  sessions           Session[]
+  jetons             Jeton[]
+  articles           Article[]
+  journal            JournalAudit[]
+  contenusModifies   ContenuEditorial[]
+
+  derniereConnexion DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([statut])
+  @@index([nom, prenom])
+}
+
+// Alias public (code personnel unique). Seul élément public d'un adhérent.
+// Table séparée de l'identité : les futures tables du SEL ne référenceront que l'alias.
+model Alias {
+  id       String @id @default(cuid())
+  code     String @unique
+  membre   Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId String @unique
+
+  createdAt DateTime @default(now())
+}
+
+// ---------- Textes juridiques et acceptations ----------
+
+model TexteJuridique {
+  id          String    @id @default(cuid())
+  type        TypeTexte
+  titre       String
+  version     String
+  contenu     String    @db.Text // texte complet affiché au-dessus de la case
+  fichierUrl  String? // PDF téléchargeable
+  enVigueurLe DateTime
+
+  acceptations Acceptation[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([type, version])
+  @@index([type, enVigueurLe])
+}
+
+// Preuve d'acceptation (RG-21) : texte + version + horodatage.
+// Rattachée à la demande au dépôt, puis au membre à la validation.
+model Acceptation {
+  id String @id @default(cuid())
+
+  texte   TexteJuridique @relation(fields: [texteId], references: [id])
+  texteId String
+
+  demande   DemandeAdhesion? @relation(fields: [demandeId], references: [id])
+  demandeId String?
+  membre    Membre?          @relation(fields: [membreId], references: [id])
+  membreId  String?
+
+  accepteLe DateTime @default(now())
+
+  @@index([membreId])
+  @@index([demandeId])
+}
+
+// ---------- Cotisations ----------
+
+// Saisie manuelle par un membre du Bureau (ADH-13, RG-27). Aucun paiement en ligne.
+model Cotisation {
+  id            String        @id @default(cuid())
+  membre        Membre        @relation("CotisationsDuMembre", fields: [membreId], references: [id])
+  membreId      String
+  montant       Decimal       @db.Decimal(8, 2)
+  modeReglement ModeReglement
+  recueLe       DateTime      @db.Date
+  valideJusquau DateTime      @db.Date
+  saisiePar     Membre        @relation("CotisationsSaisies", fields: [saisieParId], references: [id])
+  saisieParId   String
+
+  createdAt DateTime @default(now())
+
+  @@index([membreId, valideJusquau])
+}
+
+// ---------- Authentification ----------
+
+model Session {
+  id        String   @id // hachage du jeton stocké dans le cookie
+  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId  String
+  expireLe  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([membreId])
+}
+
+// Lien d'activation ou de réinitialisation : à usage unique, durée limitée (ADH-7).
+model Jeton {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  type      TypeJeton
+  membre    Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId  String
+  expireLe  DateTime
+  utiliseLe DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ---------- Contenus ----------
+
+// Blocs éditoriaux modifiables depuis la console (ADM-3, PRE-4), ex. « accueil.intro ».
+model ContenuEditorial {
+  id           String   @id @default(cuid())
+  cle          String   @unique
+  titre        String?
+  contenu      String   @db.Text
+  modifiePar   Membre?  @relation(fields: [modifieParId], references: [id])
+  modifieParId String?
+  updatedAt    DateTime @updatedAt
+}
+
+// Actualités et galerie (P9).
+model Article {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  titre        String
+  extrait      String?
+  contenu      String        @db.Text
+  categorie    String // événement, atelier, solidarité…
+  dateActivite DateTime?
+  statut       StatutArticle @default(BROUILLON)
+  publieLe     DateTime?
+  auteur       Membre        @relation(fields: [auteurId], references: [id])
+  auteurId     String
+
+  medias Media[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut, publieLe])
+}
+
+model Media {
+  id                      String   @id @default(cuid())
+  url                     String
+  legende                 String?
+  credit                  String?
+  texteAlternatif         String // obligatoire (ACT-9)
+  autorisationPublication Boolean  @default(false) // droit à l'image (ACT-8)
+  article                 Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  articleId               String?
+  ordre                   Int      @default(0)
+  importeLe               DateTime @default(now())
+}
+
+// Services de « Nos Fabrications » (P5, FAB-2) : cartes affichées sur l'accueil et dans l'espace adhérent.
+model Fabrication {
+  id          String   @id @default(cuid())
+  nom         String
+  description String   @db.Text
+  etat        String // libellé affiché : « Ouvert », « Bientôt », « À venir »…
+  couleur     String   @default("bleu") // bleu | terracotta | vert | ocre
+  lien        String? // page du service, ex. « /sel »
+  ordre       Int      @default(0)
+  visible     Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// Messages reçus via Contacts (P8, ADM-4).
+model MessageContact {
+  id        String        @id @default(cuid())
+  nom       String
+  email     String
+  telephone String?
+  sujet     String?
+  texte     String        @db.Text
+  statut    StatutMessage @default(NOUVEAU)
+  createdAt DateTime      @default(now())
+
+  @@index([statut, createdAt])
+}
+
+// ---------- Traçabilité ----------
+
+// ADM-8 : décisions d'adhésion, accès aux identités, publications, modifications sensibles.
+model JournalAudit {
+  id        String   @id @default(cuid())
+  acteur    Membre?  @relation(fields: [acteurId], references: [id])
+  acteurId  String?
+  action    String // ex. « demande.validee », « membre.suspendu »
+  cibleType String
+  cibleId   String?
+  motif     String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([cibleType, cibleId])
+}

@@ -1,0 +1,35 @@
+{
+  "name": "la-fabrique-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Site de La Fabrique de Ménesplet : vitrine, adhésions, espace adhérent et console d'administration",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:demo": "node --env-file=.env prisma/demo-adherent.mjs"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "2.0.2",
+    "@prisma/client": "6.19.3",
+    "next": "15.5.26",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sharp": "0.35.4",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "prisma": "6.19.3"
+  }
+}

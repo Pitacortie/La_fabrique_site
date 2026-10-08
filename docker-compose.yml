@@ -1,0 +1,21 @@
+# Services de développement : PostgreSQL et Mailpit (capture des courriels).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fabrique
+      POSTGRES_PASSWORD: fabrique
+      POSTGRES_DB: fabrique
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mail:
+    image: axllent/mailpit:v1.20
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  pgdata:
