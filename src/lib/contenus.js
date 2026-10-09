@@ -37,7 +37,7 @@ export const BLOCS = [
     page: "Présentation",
     libelle: "Neutralité et indépendance",
     defaut:
-      "L'association est indépendante, non partisane et non confessionnelle (statuts, art. 3). Ses moyens (réunions, pages, listes de diffusion, fichiers, logo, site) ne peuvent jamais servir à soutenir ou combattre un candidat, une liste, un parti ou une campagne électorale.",
+      "L'association est indépendante, non partisane et non confessionnelle. Ses moyens (réunions, pages, listes de diffusion, fichiers, logo, site) ne peuvent jamais servir à soutenir ou combattre un candidat, une liste, un parti ou une campagne électorale.",
   },
   {
     cle: "sel.intro",
@@ -46,12 +46,25 @@ export const BLOCS = [
     defaut:
       "Les adhérents publient des offres et des demandes de biens ou de services, et s'organisent pour les échanger sans argent. L'unité d'échange est la brique : une minute de service rendu vaut une brique, une heure en vaut soixante, quel que soit le service.",
   },
+  {
+    cle: "adhesion.paiement",
+    page: "Adhérer",
+    libelle: "Comment payer la cotisation (repris dans les e-mails de confirmation et de rappel)",
+    defaut: [
+      "Par chèque : à l'ordre de « La Fabrique de Ménesplet », à remettre à un membre du Bureau ou à envoyer au siège (12 rue Simone Veil, lieu Laser, 24700 Ménesplet).",
+      "Par virement : IBAN à compléter.",
+      "En espèces : auprès d'un membre du Bureau.",
+      "Par Wero ou Paylib : numéro à compléter.",
+    ].join("\n"),
+  },
   { cle: "site.telephone", page: "Coordonnées", libelle: "Téléphone", defaut: "À compléter", ligne: true },
-  { cle: "site.email", page: "Coordonnées", libelle: "Adresse e-mail de contact", defaut: "contact@menesplet-fabrique.fr", ligne: true },
+  { cle: "site.email", page: "Coordonnées", libelle: "Adresse e-mail de contact", defaut: "contact@lafabriquedemenesplet.fr", ligne: true },
+  { cle: "site.facebook", page: "Coordonnées", libelle: "Page Facebook (adresse complète https://…)", defaut: "", ligne: true, url: true },
+  { cle: "site.instagram", page: "Coordonnées", libelle: "Compte Instagram (adresse complète https://…)", defaut: "", ligne: true, url: true },
   {
     cle: "site.siege",
     page: "Coordonnées",
-    libelle: "Siège social (CTC-6 : modifiable si le CA transfère le siège)",
+    libelle: "Siège social",
     defaut: "12 rue Simone Veil, lieu Laser\n24700 Ménesplet",
   },
 ];

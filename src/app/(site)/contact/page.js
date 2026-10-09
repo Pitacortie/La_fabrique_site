@@ -1,13 +1,18 @@
 import Link from "next/link";
 import BlocEditable from "@/components/edition/BlocEditable";
+import { getMembreConnecte, peutEditerSite } from "@/lib/auth";
 import { getContenus } from "@/lib/contenus";
-import { site } from "@/lib/site";
+import { SUJETS_CONTACT, site } from "@/lib/site";
+import FormulaireContact from "./FormulaireContact";
 
 export const metadata = { title: "Contacts" };
 
-// CTC-1 : formulaire + téléphone. L'envoi (MessageContact + courriel) sera branché à l'étape « Contacts ».
-export default async function Contact() {
-  const c = await getContenus(["site.telephone", "site.email", "site.siege"]);
+// CTC-1 : formulaire + téléphone. « ?sujet=projet » préselectionne l'objet (PRJ-2 : « Vos attentes » pour les non-adhérents).
+export default async function Contact({ searchParams }) {
+  const { sujet = "question" } = await searchParams;
+  const membre = await getMembreConnecte();
+  const c = await getContenus(["site.telephone", "site.email", "site.siege", "site.facebook", "site.instagram"]);
+  const edition = await peutEditerSite();
   return (
     <div className="conteneur section">
       <h1>Contacts</h1>
@@ -17,38 +22,9 @@ export default async function Contact() {
       </p>
 
       <div className="grille" style={{ alignItems: "start" }}>
-        <form className="formulaire">
-          <fieldset>
-            <legend>Votre message</legend>
-            <div className="champs">
-              <div className="champ">
-                <label htmlFor="nom">Nom et prénom <span className="obligatoire">*</span></label>
-                <input id="nom" name="nom" type="text" required autoComplete="name" />
-              </div>
-              <div className="champ">
-                <label htmlFor="email">Adresse e-mail <span className="obligatoire">*</span></label>
-                <input id="email" name="email" type="email" required autoComplete="email" />
-              </div>
-            </div>
-            <div className="champ" style={{ marginTop: "1rem" }}>
-              <label htmlFor="sujet">Objet</label>
-              <select id="sujet" name="sujet" defaultValue="question">
-                <option value="question">Une question</option>
-                <option value="projet">Vos attentes, vos projets</option>
-                <option value="adhesion">Mon adhésion</option>
-                <option value="image">Retrait d'une photo (droit à l'image)</option>
-                <option value="autre">Autre</option>
-              </select>
-            </div>
-            <div className="champ" style={{ marginTop: "1rem" }}>
-              <label htmlFor="texte">Message <span className="obligatoire">*</span></label>
-              <textarea id="texte" name="texte" required />
-            </div>
-          </fieldset>
-          <div className="actions">
-            <button type="submit" className="bouton" disabled>Envoyer (bientôt actif)</button>
-          </div>
-        </form>
+        <div>
+          <FormulaireContact nom={membre ? `${membre.prenom} ${membre.nom}` : ""} email={membre?.email ?? ""} sujet={SUJETS_CONTACT[sujet] ? sujet : "question"} />
+        </div>
 
         <aside className="carte carte-terracotta">
           <h3>Nous trouver</h3>
@@ -60,6 +36,22 @@ export default async function Contact() {
           <div className="coordonnee">
             Courriel : <BlocEditable cle="site.email" texte={c["site.email"]} ligne />
           </div>
+          {[
+            ["site.facebook", "Facebook"],
+            ["site.instagram", "Instagram"],
+          ].map(([cle, nom]) =>
+            edition ? (
+              <div key={cle} className="coordonnee">
+                {nom} : <BlocEditable cle={cle} texte={c[cle]} ligne />
+              </div>
+            ) : (
+              c[cle] && (
+                <div key={cle} className="coordonnee">
+                  <a href={c[cle]} rel="noopener noreferrer">{nom}</a>
+                </div>
+              )
+            ),
+          )}
         </aside>
       </div>
     </div>

@@ -12,5 +12,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/espace/:path*", "/admin/:path*"],
+  matcher: ["/espace/:path*", "/admin/:path*", "/sel/:path*", "/sel"],
 };

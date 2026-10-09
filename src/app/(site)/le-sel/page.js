@@ -36,12 +36,12 @@ export default async function Sel() {
       <section className="section">
         <div className="encart">
           <p>
-            <strong>Le SEL ouvrira prochainement.</strong> Il est réservé aux adhérents de La Fabrique à jour de
-            cotisation et disposant d'une attestation d'assurance responsabilité civile.
+            <strong>Le SEL est réservé aux adhérents de La Fabrique</strong> à jour de cotisation et disposant d'une
+            attestation d'assurance responsabilité civile.
           </p>
           <div className="actions">
-            <Link href="/adherer" className="bouton">Adhérer</Link>
-            <Link href="/connexion">Déjà adhérent ? Se connecter →</Link>
+            <Link href="/sel" className="bouton">Entrer dans le SEL</Link>
+            <Link href="/adherer">Pas encore adhérent ? Adhérer →</Link>
           </div>
         </div>
       </section>

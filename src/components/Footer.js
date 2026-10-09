@@ -3,7 +3,12 @@ import { getContenus } from "@/lib/contenus";
 import { site } from "@/lib/site";
 
 export default async function Footer() {
-  const c = await getContenus(["site.siege"]);
+  const c = await getContenus(["site.siege", "site.facebook", "site.instagram"]);
+  // ACT-11 : simples liens, sans widget de réseau social ; affichés seulement s'ils sont renseignés
+  const reseaux = [
+    { nom: "Facebook", url: c["site.facebook"] },
+    { nom: "Instagram", url: c["site.instagram"] },
+  ].filter((r) => r.url?.startsWith("https://"));
   return (
     <footer className="pied">
       <div className="conteneur">
@@ -27,17 +32,18 @@ export default async function Footer() {
               <li><Link href="/contact">Contacts</Link></li>
             </ul>
           </div>
-          <div>
-            <h2>Nous suivre</h2>
-            <ul>
-              {/* Simples liens, sans widget de réseau social (ACT-11) */}
-              {site.reseaux.map((r) => (
-                <li key={r.nom}>
-                  <a href={r.url} rel="noopener noreferrer">{r.nom}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {reseaux.length > 0 && (
+            <div>
+              <h2>Nous suivre</h2>
+              <ul>
+                {reseaux.map((r) => (
+                  <li key={r.nom}>
+                    <a href={r.url} rel="noopener noreferrer">{r.nom}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <div className="pied-bas">
           <span>© {new Date().getFullYear()} {site.nom}</span>

@@ -13,8 +13,15 @@ const items = [
   { href: "/", label: "Modifier le site ✏️" },
   { href: "/admin/articles", label: "Actualités et galerie" },
   { href: "/admin/textes", label: "Statuts, règlement, charte" },
+  { groupe: "SEL" },
+  { href: "/admin/sel", label: "Tableau du SEL" },
+  { href: "/admin/sel/inscriptions", label: "Inscriptions et assurances" },
+  { href: "/admin/sel/annonces", label: "Annonces" },
+  { href: "/admin/sel/signalements", label: "Signalements du SEL" },
+  { href: "/admin/sel/rubriques", label: "Rubriques" },
   { groupe: "Suivi" },
   { href: "/admin/messages", label: "Messages reçus" },
+  { href: "/admin/signalements", label: "Bugs signalés" },
   { href: "/admin/journal", label: "Journal d'audit" },
   { groupe: "Mon compte" },
   { href: "/espace", label: "Mon espace adhérent" },
@@ -24,8 +31,11 @@ const items = [
 // appelle aussi exigerAdmin() : un layout seul ne protège pas toutes les requêtes.
 export default async function AdminLayout({ children }) {
   const membre = await exigerAdmin();
+  // ADM-20 : demandes et cotisations sont réservées au Bureau, inutile de les montrer aux autres
+  const RESERVE_BUREAU = ["/admin/demandes", "/admin/cotisations"];
+  const menu = membre.role === "BUREAU" ? items : items.filter((i) => !RESERVE_BUREAU.includes(i.href));
   return (
-    <Shell sousTitre="Administration" items={items} racine="/admin" membre={membre}>
+    <Shell sousTitre="Administration" items={menu} racine="/admin" membre={membre}>
       {children}
     </Shell>
   );

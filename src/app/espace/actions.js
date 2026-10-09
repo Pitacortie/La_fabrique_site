@@ -6,6 +6,8 @@ import { z } from "zod";
 import { journaliser } from "@/lib/audit";
 import { exigerMembre, fermerAutresSessions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { envoyerEmail, urlDuSite } from "@/lib/email";
+import { emailMotDePasseModifie } from "@/lib/modeles-email";
 import { limiter, reinitialiser } from "@/lib/rate-limit";
 
 const schemaCoordonnees = z.object({
@@ -80,5 +82,9 @@ export async function changerMotDePasse(_etat, formData) {
   await prisma.membre.update({ where: { id: membre.id }, data: { motDePasseHash: await hash(donnees.data.nouveau) } });
   await fermerAutresSessions(membre.id);
   await journaliser({ acteurId: membre.id, action: "membre.mot_de_passe_change", cibleType: "Membre", cibleId: membre.id });
+  // Alerte de sécurité : prévient le membre si quelqu'un d'autre a changé son mot de passe
+  await envoyerEmail({ a: membre.email, ...emailMotDePasseModifie({ prenom: membre.prenom, lienContact: `${await urlDuSite()}/contact` }) }).catch(
+    (e) => console.error("Courriel de confirmation non envoyé :", e.message),
+  );
   return { ok: "Mot de passe changé. Vos autres appareils ont été déconnectés.", reinitialiser: true };
 }

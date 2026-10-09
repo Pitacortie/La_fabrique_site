@@ -1,0 +1,33 @@
+# Lance chaque matin les tâches automatiques du site (rappels de cotisation, ménage).
+# À configurer une fois dans GitHub : Settings > Secrets and variables > Actions
+#   SITE_URL       ex. https://la-fabrique.onrender.com (sans / final)
+#   TACHES_SECRET  la même valeur que la variable TACHES_SECRET du site (Render > Environment)
+name: Tâches quotidiennes
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # 7 h UTC, soit 8 h ou 9 h à Ménesplet
+  workflow_dispatch: # bouton « Run workflow » pour lancer à la main
+
+jobs:
+  taches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Appeler le site
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TACHES_SECRET: ${{ secrets.TACHES_SECRET }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$TACHES_SECRET" ]; then
+            echo "Secrets SITE_URL / TACHES_SECRET non configurés : rien à faire."
+            exit 0
+          fi
+          # Le plan gratuit de Render met le site en veille : jusqu'à 3 essais le temps qu'il se réveille
+          for essai in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 90 -X POST \
+                 -H "Authorization: Bearer $TACHES_SECRET" "$SITE_URL/api/taches/quotidiennes"; then
+              exit 0
+            fi
+            sleep 30
+          done
+          exit 1

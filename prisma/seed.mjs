@@ -58,6 +58,21 @@ async function main() {
       enVigueurLe: new Date("2026-01-31"),
       contenu: "Texte intégral de la charte, huit principes (à importer).",
     },
+    {
+      type: "CHARTE_SEL",
+      titre: "Charte des membres du SEL",
+      version: "1",
+      enVigueurLe: new Date("2026-01-31"),
+      contenu: "Texte intégral de la Charte des membres du SEL, onze engagements d'entraide, de respect et de confiance (à importer).",
+    },
+    {
+      type: "REGLEMENT_SEL",
+      titre: "Règlement intérieur du SEL",
+      version: "1",
+      enVigueurLe: new Date("2026-01-31"),
+      contenu:
+        "Texte intégral du Règlement intérieur du SEL : briques, échanges, biens, frais, responsabilité, assurance, sécurité, litiges, sanctions, départ (à importer, et à compléter : anonymat, messagerie, données personnelles).",
+    },
   ];
   for (const t of textes) {
     await prisma.texteJuridique.upsert({
@@ -65,6 +80,25 @@ async function main() {
       update: {},
       create: t,
     });
+  }
+
+  // Rubriques du catalogue des échanges du SEL (annexe B), modifiables ensuite par un administrateur (ADM-10).
+  const rubriques = [
+    ["maison", "Maison et bricolage", "Petit bricolage, montage de meubles, aide à la peinture, aide à un déménagement, couture, repassage", "Ces coups de main ne remplacent pas l'intervention d'un professionnel."],
+    ["jardin", "Jardin et extérieur", "Tonte, désherbage, taille de petits arbustes, arrosage pendant une absence, graines et plants", null],
+    ["cuisine", "Cuisine et alimentation", "Préparation d'un repas, atelier pâtisserie, conserves, fabrication de pain, partage de surplus", "Respectez les règles d'hygiène pour les denrées partagées."],
+    ["informatique", "Informatique et numérique", "Prise en main d'un ordinateur ou d'un smartphone, installation d'une application, sécurité des comptes", "Ne confiez jamais un mot de passe."],
+    ["administratif", "Administratif et vie quotidienne", "Courrier, aide à un formulaire, CV, démarches en ligne", "Ne remplace pas un professionnel ; attention aux données personnelles sensibles."],
+    ["savoirs", "Savoirs et apprentissages", "Soutien scolaire, langues, mathématiques, photographie, musique, préparation d'un examen", null],
+    ["creation", "Création et loisirs", "Couture, tricot, dessin, jeux de société, prêt de livres, atelier entre adhérents", null],
+    ["mobilite", "Mobilité et déplacements", "Covoiturage ponctuel, accompagnement pour une course ou un rendez-vous, transport d'un objet", "Les frais (carburant, péages) se règlent en euros, convenus avant l'échange, hors briques."],
+    ["animaux", "Animaux", "Promenade d'un chien, garde ponctuelle, transport d'un animal", "Le propriétaire reste responsable et informe sur le comportement de son animal."],
+    ["enfants", "Enfants et famille", "Aide ponctuelle autour d'une activité familiale, accompagnement d'un enfant, matériel de puériculture", "Accord préalable du représentant légal obligatoire ; levée d'anonymat avant l'échange."],
+    ["bienetre", "Bien-être et convivialité", "Marche, sortie, relaxation, activité sportive, lecture partagée", "Les soins médicaux et thérapeutiques sont exclus."],
+    ["objets", "Objets : prêt, don ou échange", "Outils, petit électroménager, livres, matériel de camping, vêtements, matériel informatique", "Les biens doivent être légaux et conformes à leur description."],
+  ];
+  for (const [i, [code, libelle, exemples, rappel]] of rubriques.entries()) {
+    await prisma.rubriqueSel.upsert({ where: { code }, update: {}, create: { code, libelle, exemples, rappel, ordre: i + 1 } });
   }
 
   // Nos « Fabrications » (FAB-2) : créées une seule fois, ensuite gérées depuis la console.

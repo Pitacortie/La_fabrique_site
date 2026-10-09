@@ -16,6 +16,9 @@ export async function enregistrerContenu(_etat, formData) {
   const contenu = String(formData.get("contenu") ?? "").replace(/\r\n/g, "\n").trim();
   if (!contenu) return { erreur: "Le texte ne peut pas être vide." };
   if (contenu.length > 5000) return { erreur: "Texte trop long (5 000 caractères maximum)." };
+  if (bloc.url && !/^https:\/\/[^\s<>"]+$/.test(contenu)) {
+    return { erreur: "Indiquez une adresse complète commençant par https://" };
+  }
 
   await prisma.contenuEditorial.upsert({
     where: { cle },

@@ -17,7 +17,7 @@ export default async function Coordonnees() {
         <p style={{ margin: 0 }}>
           <strong>{membre.prenom} {membre.nom}</strong> · {membre.email}
           <br />
-          Pour corriger votre nom, votre date de naissance ou votre adresse e-mail, <Link href="/contact">contactez l'association</Link>.
+          Pour changer d'adresse e-mail : <Link href="/espace/email">Adresse e-mail</Link>. Pour corriger votre nom ou votre date de naissance, <Link href="/contact">contactez l'association</Link>.
         </p>
       </div>
       <FormulaireCoordonnees membre={membre} />

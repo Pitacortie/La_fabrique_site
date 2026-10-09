@@ -7,7 +7,8 @@ services:
     plan: free
     region: frankfurt
     # Le seed est idempotent : il crée le compte Bureau et les textes au premier déploiement, puis ne change plus rien.
-    buildCommand: npm ci && npx prisma migrate deploy && npx prisma db seed && npm run build
+    # Comptes de démo (camille@…, dominique@…, sacha@…, lou@…) : créés une seule fois si DEMO_COMPTES=1, jamais écrasés.
+    buildCommand: npm ci && npx prisma migrate deploy && npx prisma db seed && node prisma/demo-adherent.mjs --si-absent && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -24,6 +25,12 @@ services:
         sync: false
       - key: SEED_ADMIN_PASSWORD
         sync: false
+      # Site de démonstration : crée les 4 adhérents de démo. À passer à 0 (ou retirer) pour le vrai site.
+      - key: DEMO_COMPTES
+        value: "1"
+      # Secret des tâches quotidiennes, généré par Render (à recopier dans les secrets GitHub)
+      - key: TACHES_SECRET
+        generateValue: true
 
 databases:
   - name: la-fabrique-db

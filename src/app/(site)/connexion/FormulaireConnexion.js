@@ -32,7 +32,7 @@ export default function FormulaireConnexion({ suite }) {
         <button type="submit" className="bouton" disabled={enCours}>
           {enCours ? "Connexion…" : "Se connecter"}
         </button>
-        <Link href="/contact">Mot de passe oublié ?</Link>
+        <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
       </div>
     </form>
   );

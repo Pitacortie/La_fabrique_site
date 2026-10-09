@@ -5,7 +5,7 @@ import sharp from "sharp";
 
 // Les photos sont stockées sur le disque, dans « uploads/ » (hors dépôt git), et servies par /medias/…
 // En production, ce dossier devra être sur un disque persistant (ou un stockage objet).
-export const DOSSIER_UPLOADS = path.join(process.cwd(), "uploads");
+export const DOSSIER_UPLOADS = path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads"));
 
 const TYPES_ACCEPTES = ["image/jpeg", "image/png", "image/webp"];
 export const TAILLE_MAX = 10 * 1024 * 1024;

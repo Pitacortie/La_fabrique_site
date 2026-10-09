@@ -20,7 +20,7 @@ export default async function MentionsLegales() {
         <dt>Contact</dt>
         <dd>{c["site.email"]}</dd>
       </dl>
-      <p className="refs" style={{ marginTop: "2rem" }}>Texte à rédiger ou à faire relire (cahier des charges, section 13.1).</p>
+      <p className="refs" style={{ marginTop: "2rem" }}>Texte à rédiger ou à faire relire.</p>
     </div>
   );
 }

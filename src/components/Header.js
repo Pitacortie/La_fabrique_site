@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { seDeconnecter } from "@/app/(site)/connexion/actions";
 import Logo from "@/components/Logo";
 import { navigation } from "@/lib/site";
 
@@ -47,9 +48,15 @@ export default function Header({ connecte = false }) {
             </Link>
           ))}
           {connecte ? (
-            <Link href="/espace" className="bouton" onClick={() => setOuvert(false)}>
-              Mon espace
-            </Link>
+            <>
+              <Link href="/espace" className="bouton" onClick={() => setOuvert(false)}>
+                Mon espace
+              </Link>
+              {/* ACC-4 : « Sortir » déconnecte et ramène à l'accueil */}
+              <form action={seDeconnecter}>
+                <button type="submit" className="lien-sortir">Sortir</button>
+              </form>
+            </>
           ) : (
             <>
               <Link href="/connexion" className="lien-connexion" onClick={() => setOuvert(false)}>

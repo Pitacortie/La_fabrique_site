@@ -10,21 +10,25 @@ function finAnneeCivile() {
 export default async function TableauDeBord({ searchParams }) {
   const { refus } = await searchParams;
   const admin = await exigerAdmin();
-  const [demandes, membres, aRenouveler, messages] = await Promise.all([
+  const [demandes, membres, aRenouveler, messages, bugs] = await Promise.all([
     prisma.demandeAdhesion.count({ where: { statut: "EN_ATTENTE" } }),
     prisma.membre.count({ where: { statut: "ACTIF" } }),
     prisma.membre.count({
       where: { statut: "ACTIF", cotisations: { none: { valideJusquau: { gt: finAnneeCivile() } } } },
     }),
     prisma.messageContact.count({ where: { statut: "NOUVEAU" } }),
+    prisma.signalementBug.count({ where: { statut: "NOUVEAU" } }),
   ]);
 
-  const indicateurs = [
+  const tous = [
     { valeur: demandes, libelle: "Demandes en attente", href: "/admin/demandes" },
     { valeur: membres, libelle: "Membres actifs", href: "/admin/membres" },
     { valeur: aRenouveler, libelle: "Cotisations à renouveler avant le 31 janvier", href: "/admin/cotisations" },
     { valeur: messages, libelle: "Messages non traités", href: "/admin/messages" },
+    { valeur: bugs, libelle: "Bugs signalés à traiter", href: "/admin/signalements" },
   ];
+  // ADM-20 : demandes et cotisations ne concernent que le Bureau
+  const indicateurs = admin.role === "BUREAU" ? tous : tous.filter((i) => !["/admin/demandes", "/admin/cotisations"].includes(i.href));
 
   return (
     <>
@@ -32,9 +36,14 @@ export default async function TableauDeBord({ searchParams }) {
         <h1>Tableau de bord</h1>
         <span className="meta">Connecté en tant que {admin.role === "BUREAU" ? "membre du Bureau" : "administrateur"}</span>
       </div>
+      {refus === "bureau" && (
+        <div className="message-erreur" role="alert">
+          Les demandes d'adhésion et les cotisations sont réservées aux membres du Bureau.
+        </div>
+      )}
       {refus === "publication" && (
         <div className="message-erreur" role="alert">
-          Publier des actualités est réservé au Bureau et aux administrateurs mandatés (ADM-18).
+          Publier des actualités est réservé au Bureau et aux administrateurs mandatés.
         </div>
       )}
       <div className="stats">
@@ -56,6 +65,7 @@ export default async function TableauDeBord({ searchParams }) {
         <Link href="/" className="bouton">Aller sur le site ✏️</Link>
       </section>
 
+      {admin.role === "BUREAU" && (
       <section className="carte">
         <h2>Parcours d'une adhésion</h2>
         <ol className="etapes">
@@ -64,6 +74,7 @@ export default async function TableauDeBord({ searchParams }) {
           <li>Un membre du Bureau valide et enregistre la cotisation : le compte, le code et le lien d'activation sont créés.</li>
         </ol>
       </section>
+      )}
     </>
   );
 }

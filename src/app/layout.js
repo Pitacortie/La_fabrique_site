@@ -1,4 +1,6 @@
 import { Antonio, Montserrat } from "next/font/google";
+import BoutonSignalement from "@/components/BoutonSignalement";
+import { getMembreConnecte } from "@/lib/auth";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -12,10 +14,14 @@ export const metadata = {
   description: `${site.nom} : ${site.accroche.toLowerCase()}. Vie locale, entraide et initiatives habitantes.`,
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const membre = await getMembreConnecte();
   return (
     <html lang="fr" className={`${antonio.variable} ${montserrat.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <BoutonSignalement connecte={!!membre} />
+      </body>
     </html>
   );
 }

@@ -3,10 +3,6 @@ export const site = {
   nom: "La Fabrique de Ménesplet",
   accroche: "Une association participative et citoyenne",
   forme: "Association loi du 1er juillet 1901",
-  reseaux: [
-    { nom: "Facebook", url: "#" },
-    { nom: "Instagram", url: "#" },
-  ],
 };
 
 export const navigation = [
@@ -44,4 +40,21 @@ export const libellesTypeTexte = {
   BULLETIN_ADHESION: "Bulletin d'adhésion",
   CHARTE_SEL: "Charte des membres du SEL",
   REGLEMENT_SEL: "Règlement intérieur du SEL",
+};
+
+export const libellesStatutDemande = {
+  EN_ATTENTE: { texte: "En attente", classe: "badge-ocre" },
+  VALIDEE: { texte: "Validée", classe: "" },
+  REFUSEE: { texte: "Refusée", classe: "badge-terracotta" },
+  CLASSEE_SANS_SUITE: { texte: "Classée sans suite", classe: "badge-neutre" },
+};
+
+// Objets proposés dans le formulaire Contacts
+export const SUJETS_CONTACT = {
+  question: "Une question",
+  projet: "Vos attentes, vos projets",
+  adhesion: "Mon adhésion",
+  image: "Retrait d'une photo (droit à l'image)",
+  donnees: "Mes données personnelles",
+  autre: "Autre",
 };

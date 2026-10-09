@@ -4,8 +4,9 @@ import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { libellesCategorie } from "@/lib/site";
 
-export default async function Profil() {
+export default async function Profil({ searchParams }) {
   const membre = await exigerMembre();
+  const { bienvenue, email } = await searchParams;
   const derniereCotisation = await prisma.cotisation.findFirst({
     where: { membreId: membre.id },
     orderBy: { valideJusquau: "desc" },
@@ -19,6 +20,17 @@ export default async function Profil() {
         <span className="badge">Adhésion active</span>
       </div>
 
+      {bienvenue && (
+        <div className="message-info" role="status" style={{ marginBottom: "1.5rem" }}>
+          Votre compte est activé, bienvenue à La Fabrique de Ménesplet ! Votre identifiant de connexion est votre adresse
+          e-mail.
+        </div>
+      )}
+      {email === "modifie" && (
+        <div className="message-info" role="status" style={{ marginBottom: "1.5rem" }}>
+          Votre nouvelle adresse e-mail est confirmée : c'est désormais votre identifiant de connexion.
+        </div>
+      )}
       <div className="stats">
         <div className="stat">
           <div className="valeur">{membre.alias?.code ?? "—"}</div>
@@ -54,6 +66,7 @@ export default async function Profil() {
         </dl>
         <div className="actions" style={{ marginTop: "1.25rem" }}>
           <Link href="/espace/coordonnees" className="bouton bouton-secondaire">Modifier mes coordonnées</Link>
+          <Link href="/espace/email" className="bouton bouton-secondaire">Changer d'adresse e-mail</Link>
           <Link href="/espace/mot-de-passe" className="bouton bouton-secondaire">Changer mon mot de passe</Link>
         </div>
       </section>

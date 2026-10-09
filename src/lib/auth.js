@@ -91,6 +91,13 @@ export async function exigerPublication() {
   return membre;
 }
 
+// ADM-1, ADM-20 : valider les adhésions et enregistrer les cotisations est réservé au Bureau.
+export async function exigerBureau() {
+  const membre = await exigerAdmin();
+  if (membre.role !== "BUREAU") redirect("/admin?refus=bureau");
+  return membre;
+}
+
 // Console : administrateurs et membres du Bureau uniquement.
 export async function exigerAdmin() {
   const membre = await exigerMembre("/admin");

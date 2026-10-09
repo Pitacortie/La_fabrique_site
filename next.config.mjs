@@ -3,7 +3,7 @@ const nextConfig = {
   // Dossier de build séparé possible (ex. tests en parallèle d'un « npm run dev »)
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
-  serverExternalPackages: ["@node-rs/argon2", "sharp"],
+  serverExternalPackages: ["@node-rs/argon2", "sharp", "nodemailer"],
   experimental: {
     // Import de photos depuis la console (10 Mo max, voir src/lib/medias.js)
     serverActions: { bodySizeLimit: "11mb" },

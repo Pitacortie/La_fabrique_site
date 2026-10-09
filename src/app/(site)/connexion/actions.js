@@ -1,12 +1,12 @@
 "use server";
 
 import { hash, verify } from "@node-rs/argon2";
-import { headers } from "next/headers";
+import { ipClient } from "@/lib/requete";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { creerSession, supprimerSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { limiter, reinitialiser } from "@/lib/rate-limit";
+import { compterEchec, estBloque, reinitialiser } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -34,22 +34,31 @@ export async function seConnecter(_etat, formData) {
   if (!donnees.success) return { erreur: ERREUR_IDENTIFIANTS };
   const { email, motDePasse, suite } = donnees.data;
 
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
-  const cle = `connexion:${ip}:${email}`;
-  if (!limiter(cle, { max: 5, fenetreMs: 15 * 60 * 1000 }).autorise) {
+  const ip = await ipClient();
+  // Deux limites, qui ne comptent que les échecs : 5 par IP et par compte, et 20 par compte toutes IP
+  // confondues (attaque répartie sur plusieurs adresses). Fenêtre de 15 minutes.
+  const FENETRE = { fenetreMs: 15 * 60 * 1000 };
+  const cleIp = `connexion:${ip}:${email}`;
+  const cleCompte = `connexion-compte:${email}`;
+  if (estBloque(cleIp, { max: 5 }) || estBloque(cleCompte, { max: 20 })) {
     return { erreur: "Trop de tentatives. Réessayez dans quelques minutes." };
   }
 
   const membre = await prisma.membre.findUnique({ where: { email } });
   const valide = await verify(membre?.motDePasseHash ?? (await hachageFactice), motDePasse);
-  if (!membre || !membre.motDePasseHash || !valide) return { erreur: ERREUR_IDENTIFIANTS };
+  if (!membre || !membre.motDePasseHash || !valide) {
+    compterEchec(cleIp, FENETRE);
+    compterEchec(cleCompte, FENETRE);
+    return { erreur: ERREUR_IDENTIFIANTS };
+  }
 
   // CON-4 : compte suspendu ou clôturé, message neutre.
   if (membre.statut !== "ACTIF") {
     return { erreur: "Ce compte ne permet pas de se connecter pour le moment. Contactez l'association." };
   }
 
-  reinitialiser(cle);
+  reinitialiser(cleIp);
+  reinitialiser(cleCompte);
   await prisma.membre.update({ where: { id: membre.id }, data: { derniereConnexion: new Date() } });
   await creerSession(membre.id, { resterConnecte: formData.get("resterConnecte") === "on" });
   redirect(destinationSure(suite));

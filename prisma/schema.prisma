@@ -61,6 +61,7 @@ enum TypeTexte {
 enum TypeJeton {
   ACTIVATION
   REINITIALISATION
+  CHANGEMENT_EMAIL
 }
 
 enum StatutArticle {
@@ -156,14 +157,22 @@ model Membre {
   demande          DemandeAdhesion?  @relation("DemandeDuMembre")
   demandesDecidees DemandeAdhesion[] @relation("DemandesDecidees")
 
-  acceptations       Acceptation[]
-  cotisations        Cotisation[]       @relation("CotisationsDuMembre")
-  cotisationsSaisies Cotisation[]       @relation("CotisationsSaisies")
-  sessions           Session[]
-  jetons             Jeton[]
-  articles           Article[]
-  journal            JournalAudit[]
-  contenusModifies   ContenuEditorial[]
+  acceptations          Acceptation[]
+  cotisations           Cotisation[]       @relation("CotisationsDuMembre")
+  cotisationsSaisies    Cotisation[]       @relation("CotisationsSaisies")
+  sessions              Session[]
+  jetons                Jeton[]
+  articles              Article[]
+  journal               JournalAudit[]
+  contenusModifies      ContenuEditorial[]
+  signalements          SignalementBug[]
+  messagesRepondus      MessageContact[]
+  inscriptionSel        InscriptionSel?
+  attestationsRc        AttestationRc[]    @relation("AttestationsDuMembre")
+  attestationsVerifiees AttestationRc[]    @relation("AttestationsVerifiees")
+
+  // ADH-10 : date du dernier rappel de cotisation envoyé (évite les relances quotidiennes)
+  dernierRappelCotisation DateTime?
 
   derniereConnexion DateTime?
   createdAt         DateTime  @default(now())
@@ -180,6 +189,21 @@ model Alias {
   code     String @unique
   membre   Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
   membreId String @unique
+
+  // SEL : solde en briques (1 minute = 1 brique), mis à jour avec chaque transaction (SEL-9, RG-8)
+  soldeBriques    Int  @default(0)
+  // Dérogation accordée par un administrateur : solde minimum autorisé (sinon -120, SEL-22)
+  plancherBriques Int?
+
+  annonces             Annonce[]
+  conversationsAuteur  Conversation[]       @relation("ConversationAuteur")
+  conversationsContact Conversation[]       @relation("ConversationInterlocuteur")
+  messages             Message[]
+  echangesBeneficiaire Echange[]            @relation("EchangeBeneficiaire")
+  echangesPrestataire  Echange[]            @relation("EchangePrestataire")
+  transactionsDebit    TransactionBriques[] @relation("TransactionDebit")
+  transactionsCredit   TransactionBriques[] @relation("TransactionCredit")
+  signalementsSel      SignalementSel[]
 
   createdAt DateTime @default(now())
 }
@@ -255,14 +279,15 @@ model Session {
 
 // Lien d'activation ou de réinitialisation : à usage unique, durée limitée (ADH-7).
 model Jeton {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  type      TypeJeton
-  membre    Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
-  membreId  String
-  expireLe  DateTime
-  utiliseLe DateTime?
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  type        TypeJeton
+  membre      Membre    @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId    String
+  expireLe    DateTime
+  nouvelEmail String? // CHANGEMENT_EMAIL : adresse à confirmer
+  utiliseLe   DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 // ---------- Contenus ----------
@@ -337,6 +362,37 @@ model MessageContact {
   statut    StatutMessage @default(NOUVEAU)
   createdAt DateTime      @default(now())
 
+  // Réponse envoyée depuis la console, au nom de l'association (CTC-2)
+  reponse      String?   @db.Text
+  reponduLe    DateTime?
+  reponduPar   Membre?   @relation(fields: [reponduParId], references: [id], onDelete: SetNull)
+  reponduParId String?
+
+  @@index([statut, createdAt])
+}
+
+// Bouton « Signaler un bug », présent sur toutes les pages.
+enum StatutSignalement {
+  NOUVEAU
+  EN_COURS
+  RESOLU
+  IGNORE
+}
+
+model SignalementBug {
+  id          String            @id @default(cuid())
+  description String            @db.Text
+  page        String // chemin de la page (jetons secrets retirés)
+  navigateur  String? // user-agent
+  ecran       String? // ex. « 390×844 »
+  email       String? // pour recontacter un visiteur non connecté (facultatif)
+  membre      Membre?           @relation(fields: [membreId], references: [id], onDelete: SetNull)
+  membreId    String?
+  statut      StatutSignalement @default(NOUVEAU)
+  note        String? // note interne de l'administrateur
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
   @@index([statut, createdAt])
 }
 
@@ -356,4 +412,253 @@ model JournalAudit {
 
   @@index([createdAt])
   @@index([cibleType, cibleId])
+}
+
+// =====================================================================
+// SEL : service d'échange local (section 5 P6, sections 6 et 7)
+// Toutes les tables d'échange référencent l'ALIAS, jamais l'identité (section 6.2).
+// =====================================================================
+
+enum StatutInscriptionSel {
+  ACTIVE
+  SUSPENDUE
+}
+
+enum StatutAttestation {
+  EN_ATTENTE
+  VALIDEE
+  REFUSEE
+}
+
+enum TypeAnnonce {
+  OFFRE
+  DEMANDE
+}
+
+enum NatureAnnonce {
+  SERVICE // payé au temps passé
+  PRET // prêt d'objet
+  DON
+  OBJET // objet échangé contre des briques (valeur fixée par celui qui le propose, SEL-14)
+}
+
+enum Modalite {
+  PRESENTIEL
+  DISTANCE
+}
+
+enum StatutAnnonce {
+  PUBLIEE
+  CLOTUREE // retirée par son auteur
+  MASQUEE // masquée par la modération (NEU-3)
+}
+
+enum StatutConversation {
+  OUVERTE
+  FERMEE // bloquée ou close par l'un des deux
+}
+
+enum StatutEchange {
+  PROPOSE // créneau et lieu proposés par le bénéficiaire
+  CONFIRME // créneau confirmé par celui qui rend le service
+  DECLARE // service réalisé : temps passé déclaré par celui qui l'a rendu
+  TERMINE // confirmé par le bénéficiaire : briques transférées
+  ANNULE
+  LITIGE // le bénéficiaire conteste : médiation du CA (SEL-8)
+}
+
+enum MotifSignalementSel {
+  PARTISAN // contenu partisan ou électoral (NEU-4)
+  PROPOS // propos discriminatoires, agressifs ou humiliants
+  ARNAQUE
+  DONNEES // coordonnées ou données personnelles exposées
+  AUTRE
+}
+
+enum StatutSignalementSel {
+  NOUVEAU
+  TRAITE
+}
+
+// SEL-2, RG-11 : inscription au SEL (les acceptations de la Charte et du Règlement du SEL sont dans « Acceptation »)
+model InscriptionSel {
+  id              String               @id @default(cuid())
+  membre          Membre               @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membreId        String               @unique
+  statut          StatutInscriptionSel @default(ACTIVE)
+  motifSuspension String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+// SEL-21 : attestation d'assurance RC, vérifiée par un administrateur qui saisit sa date de validité ;
+// le fichier est ensuite supprimé, seuls la date et le nom du vérificateur sont conservés.
+model AttestationRc {
+  id            String            @id @default(cuid())
+  membre        Membre            @relation("AttestationsDuMembre", fields: [membreId], references: [id], onDelete: Cascade)
+  membreId      String
+  assureur      String
+  valideJusquau DateTime          @db.Date
+  fichier       String? // chemin du fichier dans le stockage privé, effacé après vérification
+  fichierType   String?
+  statut        StatutAttestation @default(EN_ATTENTE)
+  motifRefus    String?
+  verifiePar    Membre?           @relation("AttestationsVerifiees", fields: [verifieParId], references: [id], onDelete: SetNull)
+  verifieParId  String?
+  verifieLe     DateTime?
+  createdAt     DateTime          @default(now())
+
+  @@index([statut, createdAt])
+  @@index([membreId])
+}
+
+// Rubriques du catalogue des échanges (annexe B), modifiables par un administrateur (SEL-11, ADM-10)
+model RubriqueSel {
+  id       String    @id @default(cuid())
+  code     String    @unique
+  libelle  String
+  exemples String?   @db.Text
+  rappel   String?   @db.Text // avertissement affiché dans la rubrique (SEL-17, SEL-24)
+  ordre    Int       @default(0)
+  actif    Boolean   @default(true)
+  annonces Annonce[]
+}
+
+// SEL-5 : une annonce, toujours publiée sous l'alias de son auteur
+model Annonce {
+  id              String           @id @default(cuid())
+  type            TypeAnnonce
+  nature          NatureAnnonce
+  rubrique        RubriqueSel      @relation(fields: [rubriqueId], references: [id])
+  rubriqueId      String
+  titre           String
+  description     String           @db.Text
+  dureeEstimee    Int? // minutes (service)
+  valeurBriques   Int? // objet échangé contre des briques
+  zone            String // commune ou secteur, jamais une adresse (section 6.6)
+  modalite        Modalite
+  disponibilites  String?
+  dateFin         DateTime?        @db.Date
+  motsCles        String?
+  auteur          Alias            @relation(fields: [auteurId], references: [id])
+  auteurId        String
+  statut          StatutAnnonce    @default(PUBLIEE)
+  motifModeration String?
+  conversations   Conversation[]
+  signalements    SignalementSel[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([type, statut, createdAt])
+  @@index([auteurId])
+}
+
+// MSG-1 à MSG-3 : une conversation lie exactement deux alias, autour d'une annonce
+model Conversation {
+  id                    String             @id @default(cuid())
+  annonce               Annonce            @relation(fields: [annonceId], references: [id])
+  annonceId             String
+  auteur                Alias              @relation("ConversationAuteur", fields: [auteurId], references: [id])
+  auteurId              String // auteur de l'annonce
+  interlocuteur         Alias              @relation("ConversationInterlocuteur", fields: [interlocuteurId], references: [id])
+  interlocuteurId       String
+  statut                StatutConversation @default(OUVERTE)
+  fermeeParId           String?
+  // Levée d'anonymat (section 6.5) : accord de chaque partie, irréversible
+  accordAuteurLe        DateTime?
+  accordInterlocuteurLe DateTime?
+  messages              Message[]
+  echanges              Echange[]
+  signalements          SignalementSel[]
+  dernierMessageLe      DateTime           @default(now())
+  createdAt             DateTime           @default(now())
+
+  @@unique([annonceId, interlocuteurId])
+  @@index([auteurId, dernierMessageLe])
+  @@index([interlocuteurId, dernierMessageLe])
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  emetteur       Alias            @relation(fields: [emetteurId], references: [id])
+  emetteurId     String
+  texte          String           @db.Text
+  luLe           DateTime?
+  signalements   SignalementSel[]
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// Réservation puis clôture d'un échange (support de la monnaie)
+model Echange {
+  id               String              @id @default(cuid())
+  conversation     Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId   String
+  beneficiaire     Alias               @relation("EchangeBeneficiaire", fields: [beneficiaireId], references: [id])
+  beneficiaireId   String
+  prestataire      Alias               @relation("EchangePrestataire", fields: [prestataireId], references: [id])
+  prestataireId    String
+  nature           NatureAnnonce
+  // Réservation : proposée par le bénéficiaire, confirmée par le prestataire
+  creneau          DateTime
+  lieu             String
+  confirmeLe       DateTime?
+  // Déclaration par le prestataire une fois le service rendu
+  dureeMinutes     Int?
+  briques          Int? // montant transféré (durée pour un service, valeur pour un objet, 0 pour un prêt ou un don)
+  bienPasse        Boolean?
+  commentaire      String?
+  declareLe        DateTime?
+  // Confirmation par le bénéficiaire
+  avisBeneficiaire String?
+  termineLe        DateTime?
+  statut           StatutEchange       @default(PROPOSE)
+  annulePar        String? // alias qui a annulé ou contesté
+  motifAnnulation  String?
+  transaction      TransactionBriques?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([beneficiaireId, statut])
+  @@index([prestataireId, statut])
+}
+
+// Grand livre des briques : chaque mouvement est conservé (débit et crédit)
+model TransactionBriques {
+  id        String   @id @default(cuid())
+  echange   Echange? @relation(fields: [echangeId], references: [id])
+  echangeId String?  @unique
+  montant   Int
+  debite    Alias?   @relation("TransactionDebit", fields: [debiteId], references: [id])
+  debiteId  String? // null : compte d'urgence et de solidarité de l'association
+  credite   Alias?   @relation("TransactionCredit", fields: [crediteId], references: [id])
+  crediteId String?
+  libelle   String
+  createdAt DateTime @default(now())
+
+  @@index([debiteId, createdAt])
+  @@index([crediteId, createdAt])
+}
+
+// MSG-7, NEU-4 : signalement d'un message, d'une annonce ou d'une conversation
+model SignalementSel {
+  id             String               @id @default(cuid())
+  signaleur      Alias                @relation(fields: [signaleurId], references: [id])
+  signaleurId    String
+  annonce        Annonce?             @relation(fields: [annonceId], references: [id], onDelete: Cascade)
+  annonceId      String?
+  conversation   Conversation?        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String?
+  message        Message?             @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId      String?
+  motif          MotifSignalementSel
+  details        String?
+  statut         StatutSignalementSel @default(NOUVEAU)
+  note           String?
+  createdAt      DateTime             @default(now())
+
+  @@index([statut, createdAt])
 }
