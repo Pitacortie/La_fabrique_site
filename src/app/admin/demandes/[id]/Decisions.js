@@ -5,6 +5,7 @@ import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { libellesCategorie, libellesModeReglement } from "@/lib/site";
 import { classerDemande, refuserDemande, renvoyerActivation, validerDemande } from "../actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 // ADH-13 : valider = enregistrer la cotisation reçue (montant, mode, date, fin de validité) et la catégorie.
 export function FormulaireValidation({ demande, aujourdhui, finAnnee }) {
@@ -30,11 +31,11 @@ export function FormulaireValidation({ demande, aujourdhui, finAnnee }) {
           </div>
           <div className="champ">
             <label htmlFor="recueLe">Reçue le</label>
-            <input id="recueLe" name="recueLe" type="date" required defaultValue={aujourdhui} />
+            <ChampDate id="recueLe" name="recueLe" required defaultValue={aujourdhui} />
           </div>
           <div className="champ">
             <label htmlFor="valideJusquau">Valable jusqu'au</label>
-            <input id="valideJusquau" name="valideJusquau" type="date" required defaultValue={finAnnee} />
+            <ChampDate id="valideJusquau" name="valideJusquau" required defaultValue={finAnnee} />
             <span className="aide">Fin de l'année civile.</span>
           </div>
           <div className="champ">

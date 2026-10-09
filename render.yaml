@@ -25,6 +25,17 @@ services:
         sync: false
       - key: SEED_ADMIN_PASSWORD
         sync: false
+      # Envoi des courriels (Brevo) : à remplir dans Render > Environment. Sans SMTP_HOST, ils s'affichent dans les logs.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        value: "La Fabrique de Ménesplet <contact@lafabriquedemenesplet.fr>"
       # Site de démonstration : crée les 4 adhérents de démo. À passer à 0 (ou retirer) pour le vrai site.
       - key: DEMO_COMPTES
         value: "1"

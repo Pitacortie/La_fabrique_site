@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { enregistrerRubrique, refuserAttestation, trancherLitige, validerAttestation } from "./actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 export function VerificationAttestation({ id, dateDeclaree, demain }) {
   const [etatV, valider] = useActionState(validerAttestation, null);
@@ -16,7 +17,7 @@ export function VerificationAttestation({ id, dateDeclaree, demain }) {
         <Retour etat={etatV} />
         <label className="champ">
           <span className="champ-libelle">Valable jusqu'au (lu sur l'attestation)</span>
-          <input type="date" name="valideJusquau" required min={demain} defaultValue={dateDeclaree} />
+          <ChampDate name="valideJusquau" required min={demain} defaultValue={dateDeclaree} />
         </label>
         <BoutonEnvoi className="bouton bouton-vert">Valider</BoutonEnvoi>
       </form>

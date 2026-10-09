@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { enregistrerArticle } from "./actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 const CATEGORIES = ["Événement", "Atelier", "Solidarité", "Vie associative"];
 
@@ -31,7 +32,7 @@ export default function FormulaireArticle({ article, dateActivite }) {
           </div>
           <div className="champ">
             <label htmlFor="dateActivite">Date de l'activité <span className="obligatoire">*</span></label>
-            <input id="dateActivite" name="dateActivite" type="date" defaultValue={dateActivite} required />
+            <ChampDate id="dateActivite" name="dateActivite" defaultValue={dateActivite} required />
             <span className="aide">Après cette date, l'activité passe automatiquement en « passée ».</span>
           </div>
         </div>

@@ -6,6 +6,7 @@ import Retour from "@/components/Retour";
 import TexteSimple from "@/components/TexteSimple";
 import { libellesModeReglement } from "@/lib/site";
 import { deposerDemande } from "./actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 // Formulaire repris du bulletin d'adhésion 2026 (annexe G), dans le même ordre.
 // Deux étapes (ADH-16) : saisie, puis récapitulatif avant envoi. Les champs restent dans la page
@@ -56,7 +57,8 @@ const dateFr = (v) => (v ? new Date(`${v}T12:00:00`).toLocaleDateString("fr-FR",
 
 // Lignes du récapitulatif, lues dans le formulaire au moment de passer à l'étape 2
 function recapitulatif(form, mineur) {
-  const v = (n) => (form.elements[n]?.value ?? "").trim();
+  // Valeur envoyée sous ce nom (pour une date : le champ caché aaaa-mm-jj, pas la case jj/mm/aaaa)
+  const v = (n) => (form.querySelector(`[name="${n}"]`)?.value ?? "").trim();
   const lignes = [
     ["Nom", `${v("prenom")} ${v("nom")}`],
     ["Adresse e-mail (identifiant)", v("email")],
@@ -167,8 +169,8 @@ export default function FormulaireAdhesion({ textes = {} }) {
               <input id="telephone" name="telephone" type="tel" required autoComplete="tel" pattern="[0-9 +().-]{10,20}" />
             </div>
             <div className="champ">
-              <label htmlFor="dateNaissance">Date de naissance <span className="obligatoire">*</span></label>
-              <input id="dateNaissance" name="dateNaissance" type="date" required value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />
+              <label htmlFor="dateNaissance">Date de naissance (jj/mm/aaaa) <span className="obligatoire">*</span></label>
+              <ChampDate id="dateNaissance" name="dateNaissance" required naissance onChange={setDateNaissance} autoComplete="bday" />
             </div>
           </div>
           <div className="champs" style={{ marginTop: "1rem" }}>

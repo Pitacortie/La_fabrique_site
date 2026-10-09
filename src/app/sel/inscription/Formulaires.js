@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { accepterTextesSel, deposerAttestation, inscrireSel } from "@/app/sel/actions/inscription";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
+import { ChampDate } from "@/components/ChampsDate";
 
 function Textes({ textes }) {
   return textes.map((t) => (
@@ -42,7 +43,7 @@ function Attestation({ demain }) {
         </div>
         <div className="champ">
           <label htmlFor="valideJusquau">Valable jusqu'au <span className="obligatoire">*</span></label>
-          <input id="valideJusquau" name="valideJusquau" type="date" required min={demain} />
+          <ChampDate id="valideJusquau" name="valideJusquau" required min={demain} />
         </div>
       </div>
       <div className="champ" style={{ marginTop: "1rem" }}>

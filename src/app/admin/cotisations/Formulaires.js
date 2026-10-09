@@ -5,6 +5,7 @@ import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { libellesModeReglement } from "@/lib/site";
 import { enregistrerCotisation, lancerRappels } from "./actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 export function FormulaireCotisation({ membres, aujourdhui, finAnnee }) {
   const [etat, action] = useActionState(enregistrerCotisation, null);
@@ -38,11 +39,11 @@ export function FormulaireCotisation({ membres, aujourdhui, finAnnee }) {
           </div>
           <div className="champ">
             <label htmlFor="recueLe">Reçue le</label>
-            <input id="recueLe" name="recueLe" type="date" required defaultValue={aujourdhui} />
+            <ChampDate id="recueLe" name="recueLe" required defaultValue={aujourdhui} />
           </div>
           <div className="champ">
             <label htmlFor="valideJusquau">Valable jusqu'au</label>
-            <input id="valideJusquau" name="valideJusquau" type="date" required defaultValue={finAnnee} />
+            <ChampDate id="valideJusquau" name="valideJusquau" required defaultValue={finAnnee} />
           </div>
         </div>
       </fieldset>

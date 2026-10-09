@@ -10,6 +10,7 @@ import { FormulaireEtape } from "@/app/sel/Formulaires";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import { formatCreneau } from "@/lib/heure-paris";
 import { duree, libellesStatutEchange, plancher } from "@/lib/sel/regles";
+import { ChampDate, ChampHeure } from "@/components/ChampsDate";
 
 const Cache = ({ conversationId, echangeId }) => (
   <>
@@ -60,11 +61,11 @@ export default function Echange({ conversation, echange, suis, autreCode, peutPr
             <div className="champs">
               <div className="champ">
                 <label htmlFor="rdv-date">Date</label>
-                <input id="rdv-date" name="date" type="date" required min={demain} />
+                <ChampDate id="rdv-date" name="date" required min={demain} />
               </div>
               <div className="champ">
                 <label htmlFor="rdv-heure">Heure</label>
-                <input id="rdv-heure" name="heure" type="time" required step="300" />
+                <ChampHeure id="rdv-heure" name="heure" required />
               </div>
               <div className="champ" style={{ gridColumn: "1 / -1" }}>
                 <label htmlFor="rdv-lieu">Lieu</label>

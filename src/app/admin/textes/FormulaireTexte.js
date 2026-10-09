@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { corrigerVersion, publierVersion } from "./actions";
+import { ChampDate } from "@/components/ChampsDate";
 
 // Sans `texte` : nouvelle version. Avec `texte` : correction d'une version jamais acceptée.
 export default function FormulaireTexte({ types, texte, enVigueurLe, typeParDefaut }) {
@@ -34,7 +35,7 @@ export default function FormulaireTexte({ types, texte, enVigueurLe, typeParDefa
         </div>
         <div className="champ">
           <label htmlFor={`${p}-enVigueurLe`}>En vigueur le</label>
-          <input id={`${p}-enVigueurLe`} name="enVigueurLe" type="date" required defaultValue={enVigueurLe} />
+          <ChampDate id={`${p}-enVigueurLe`} name="enVigueurLe" required defaultValue={enVigueurLe} />
         </div>
       </div>
       <div className="champ">

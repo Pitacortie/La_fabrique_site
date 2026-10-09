@@ -28,6 +28,7 @@ export default async function Footer() {
               <li><Link href="/presentation">Présentation</Link></li>
               <li><Link href="/documents">Statuts, règlement et charte</Link></li>
               <li><Link href="/actualites">Actualités et galerie</Link></li>
+              <li><Link href="/le-sel">Le SEL : échanges entre adhérents</Link></li>
               <li><Link href="/adherer">Adhérer</Link></li>
               <li><Link href="/contact">Contacts</Link></li>
             </ul>

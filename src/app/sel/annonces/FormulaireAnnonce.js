@@ -5,6 +5,7 @@ import { modifierAnnonce, publierAnnonce } from "@/app/sel/actions/annonces";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import { libellesNature } from "@/lib/sel/regles";
+import { ChampDate } from "@/components/ChampsDate";
 
 // Publication ou modification d'une annonce (SEL-5). Les champs utiles changent selon la nature.
 export default function FormulaireAnnonce({ rubriques, annonce, zoneParDefaut = "" }) {
@@ -107,7 +108,7 @@ export default function FormulaireAnnonce({ rubriques, annonce, zoneParDefaut = 
           </div>
           <div className="champ">
             <label htmlFor="dateFin">Annonce valable jusqu'au (facultatif)</label>
-            <input id="dateFin" name="dateFin" type="date" defaultValue={annonce?.dateFin ? new Date(annonce.dateFin).toISOString().slice(0, 10) : ""} />
+            <ChampDate id="dateFin" name="dateFin" defaultValue={annonce?.dateFin ? new Date(annonce.dateFin).toISOString().slice(0, 10) : ""} />
           </div>
         </div>
         <div className="champ" style={{ marginTop: "1rem" }}>

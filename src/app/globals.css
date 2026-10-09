@@ -180,7 +180,7 @@ img { max-width: 100%; height: auto; }
 fieldset { border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--surface); padding: 1.25rem 1.4rem; margin: 0; }
 legend { font-family: var(--font-antonio), sans-serif; color: var(--bleu); font-size: 1.3rem; padding-inline: 0.4rem; }
 .champs { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
-.champ { display: grid; gap: 0.3rem; }
+.champ { display: grid; gap: 0.3rem; align-content: start; }
 .champ label { font-weight: 600; font-size: 0.9rem; }
 .champ .aide { font-size: 0.8rem; color: var(--texte-doux); }
 input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"],
@@ -480,3 +480,27 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 .sel-stat-solde .valeur { color: var(--terracotta); }
 .sel-plus { color: var(--vert); font-weight: 700; }
 .sel-moins { color: var(--terracotta); font-weight: 700; }
+
+/* ---------- Champ date : saisie jj/mm/aaaa + calendrier ---------- */
+
+.champ-date { position: relative; display: flex; gap: 0.4rem; align-items: stretch; }
+.champ-date input[type="text"] { flex: 1; min-width: 0; }
+.champ-date-bouton { flex: none; font-size: 1.1rem; line-height: 1; padding: 0 0.7rem; cursor: pointer; background: #fff; border: 1px solid #c9bba5; border-radius: 8px; }
+.champ-date-bouton:hover, .champ-date-bouton[aria-expanded="true"] { border-color: var(--bleu); background: #eef4f7; }
+.champ-date-calendrier {
+  position: absolute; z-index: 40; top: calc(100% + 0.35rem); left: 0;
+  background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); box-shadow: 0 8px 28px rgb(43 38 32 / 0.18);
+  padding: 0.75rem; max-width: calc(100vw - 2rem); overflow-x: auto;
+}
+.champ-date-calendrier .rdp-root {
+  --rdp-accent-color: var(--bleu);
+  --rdp-accent-background-color: #e3eef3;
+  --rdp-day-height: 2.4rem;
+  --rdp-day-width: 2.4rem;
+  --rdp-day_button-height: 2.3rem;
+  --rdp-day_button-width: 2.3rem;
+  font-family: var(--font-montserrat), sans-serif;
+  color: var(--texte);
+}
+.champ-date-calendrier .rdp-caption_label { font-weight: 600; text-transform: capitalize; }
+.champ-date-calendrier .rdp-weekday { text-transform: capitalize; font-size: 0.8rem; }

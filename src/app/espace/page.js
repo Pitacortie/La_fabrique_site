@@ -3,6 +3,7 @@ import { exigerMembre } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { libellesCategorie } from "@/lib/site";
+import CarteSel from "./CarteSel";
 
 export default async function Profil({ searchParams }) {
   const membre = await exigerMembre();
@@ -45,6 +46,8 @@ export default async function Profil({ searchParams }) {
           </div>
         </div>
       </div>
+
+      <CarteSel />
 
       <section className="carte">
         <h2>Mes informations</h2>

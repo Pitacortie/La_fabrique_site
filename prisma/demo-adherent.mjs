@@ -50,6 +50,16 @@ const PERSONNES = [
     adresse: "2 impasse des Vignes",
     annonce: { type: "OFFRE", nature: "OBJET", rubrique: "objets", titre: "Perceuse-visseuse à échanger", description: "Perceuse-visseuse sans fil en bon état, avec deux batteries et un coffret de mèches.", valeurBriques: 45, modalite: "PRESENTIEL" },
   },
+  {
+    // Adhérent à jour de cotisation mais PAS inscrit au SEL : pour tester l'inscription
+    email: "alex@fabrique.local",
+    motDePasse: "alex2026",
+    prenom: "Alex",
+    nom: "Moreau",
+    telephone: "06 00 00 00 05",
+    adresse: "5 place de l'Église",
+    sel: false,
+  },
 ];
 
 async function supprimer(email) {
@@ -128,16 +138,18 @@ async function main() {
         dateAgrement: new Date(),
         alias: { create: { code: genererCode() } },
         cotisations: { create: { montant: 5, modeReglement: "ESPECES", recueLe: new Date(), valideJusquau: finAnnee, saisieParId: bureau.id } },
-        inscriptionSel: { create: {} },
-        attestationsRc: {
+        ...(p.sel === false ? {} : { inscriptionSel: { create: {} } }),
+        attestationsRc: p.sel === false ? undefined : {
           create: { assureur: "Assurance fictive", valideJusquau: dansUnAn, statut: "VALIDEE", verifieParId: bureau.id, verifieLe: new Date() },
         },
       },
       include: { alias: true },
     });
     // Textes en vigueur acceptés (adhésion et SEL), comme lors d'une vraie inscription
-    await prisma.acceptation.createMany({ data: enVigueur.map((t) => ({ texteId: t.id, membreId: membre.id })) });
-    const rubrique = await prisma.rubriqueSel.findUnique({ where: { code: p.annonce.rubrique } });
+    // Un adhérent non inscrit au SEL n'a accepté que les textes de l'adhésion (pas la Charte ni le Règlement du SEL)
+    const acceptes = p.sel === false ? enVigueur.filter((t) => !["CHARTE_SEL", "REGLEMENT_SEL"].includes(t.type)) : enVigueur;
+    await prisma.acceptation.createMany({ data: acceptes.map((t) => ({ texteId: t.id, membreId: membre.id })) });
+    const rubrique = p.annonce && (await prisma.rubriqueSel.findUnique({ where: { code: p.annonce.rubrique } }));
     if (rubrique) {
       const { rubrique: _, ...annonce } = p.annonce;
       await prisma.annonce.create({ data: { ...annonce, rubriqueId: rubrique.id, zone: "Ménesplet", auteurId: membre.alias.id } });

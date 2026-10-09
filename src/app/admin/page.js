@@ -10,7 +10,7 @@ function finAnneeCivile() {
 export default async function TableauDeBord({ searchParams }) {
   const { refus } = await searchParams;
   const admin = await exigerAdmin();
-  const [demandes, membres, aRenouveler, messages, bugs] = await Promise.all([
+  const [demandes, membres, aRenouveler, messages, bugs, attestationsSel, signalementsSel] = await Promise.all([
     prisma.demandeAdhesion.count({ where: { statut: "EN_ATTENTE" } }),
     prisma.membre.count({ where: { statut: "ACTIF" } }),
     prisma.membre.count({
@@ -18,6 +18,8 @@ export default async function TableauDeBord({ searchParams }) {
     }),
     prisma.messageContact.count({ where: { statut: "NOUVEAU" } }),
     prisma.signalementBug.count({ where: { statut: "NOUVEAU" } }),
+    prisma.attestationRc.count({ where: { statut: "EN_ATTENTE" } }),
+    prisma.signalementSel.count({ where: { statut: "NOUVEAU" } }),
   ]);
 
   const tous = [
@@ -26,6 +28,8 @@ export default async function TableauDeBord({ searchParams }) {
     { valeur: aRenouveler, libelle: "Cotisations à renouveler avant le 31 janvier", href: "/admin/cotisations" },
     { valeur: messages, libelle: "Messages non traités", href: "/admin/messages" },
     { valeur: bugs, libelle: "Bugs signalés à traiter", href: "/admin/signalements" },
+    { valeur: attestationsSel, libelle: "Assurances à vérifier pour le SEL", href: "/admin/sel/inscriptions" },
+    { valeur: signalementsSel, libelle: "Signalements dans le SEL", href: "/admin/sel/signalements" },
   ];
   // ADM-20 : demandes et cotisations ne concernent que le Bureau
   const indicateurs = admin.role === "BUREAU" ? tous : tous.filter((i) => !["/admin/demandes", "/admin/cotisations"].includes(i.href));

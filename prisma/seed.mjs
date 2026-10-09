@@ -105,12 +105,18 @@ async function main() {
   if ((await prisma.fabrication.count()) === 0) {
     await prisma.fabrication.createMany({
       data: [
-        { nom: "Le SEL", description: "Service d'échange local : offres, demandes et échanges en briques, sans argent.", etat: "Ouverture prochaine", couleur: "terracotta", lien: "/sel", ordre: 1 },
+        { nom: "Le SEL", description: "Service d'échange local : services et objets échangés entre adhérents, en briques, sans argent.", etat: "Ouvert", couleur: "terracotta", lien: "/sel", ordre: 1 },
         { nom: "Café citoyen", description: "Contenu en cours de définition.", etat: "À venir", couleur: "bleu", ordre: 2 },
         { nom: "Plan de Sauvegarde", description: "Contenu en cours de définition.", etat: "À venir", couleur: "vert", ordre: 3 },
       ],
     });
   }
+
+  // Le SEL est ouvert : on met à jour la carte créée avant son ouverture (si personne ne l'a modifiée depuis)
+  await prisma.fabrication.updateMany({
+    where: { nom: "Le SEL", etat: "Ouverture prochaine" },
+    data: { etat: "Ouvert", description: "Service d'échange local : services et objets échangés entre adhérents, en briques, sans argent." },
+  });
 
   const articles = [
     {
