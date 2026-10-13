@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigerAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import TestEmail from "./emails/TestEmail";
 
 // Fin de la période de cotisation en cours : 31 décembre (année civile, règlement art. 3).
 function finAnneeCivile() {
@@ -68,6 +69,14 @@ export default async function TableauDeBord({ searchParams }) {
         </p>
         <Link href="/" className="bouton">Aller sur le site ✏️</Link>
       </section>
+
+      {admin.role === "BUREAU" && (
+        <section className="carte carte-bleu" style={{ marginBottom: "1.5rem" }}>
+          <h2>E-mails du site</h2>
+          <p>Vérifiez que le site arrive à envoyer des e-mails. En cas d'échec, l'erreur exacte et une piste de solution s'affichent ici.</p>
+          <TestEmail email={admin.email} />
+        </section>
+      )}
 
       {admin.role === "BUREAU" && (
       <section className="carte">
