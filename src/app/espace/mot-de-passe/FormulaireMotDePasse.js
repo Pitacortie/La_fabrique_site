@@ -1,5 +1,6 @@
 "use client";
 
+import ChampMotDePasse from "@/components/ChampMotDePasse";
 import { useActionState, useEffect, useRef } from "react";
 import { changerMotDePasse } from "@/app/espace/actions";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
@@ -21,16 +22,16 @@ export default function FormulaireMotDePasse({ email }) {
         <legend>Changer mon mot de passe</legend>
         <div className="champ">
           <label htmlFor="actuel">Mot de passe actuel</label>
-          <input id="actuel" name="actuel" type="password" required autoComplete="current-password" />
+          <ChampMotDePasse id="actuel" name="actuel" required autoComplete="current-password" />
         </div>
         <div className="champ" style={{ marginTop: "1rem" }}>
           <label htmlFor="nouveau">Nouveau mot de passe</label>
-          <input id="nouveau" name="nouveau" type="password" required minLength={10} maxLength={200} autoComplete="new-password" aria-describedby="aide-mdp" />
+          <ChampMotDePasse id="nouveau" name="nouveau" required minLength={10} maxLength={200} autoComplete="new-password" aria-describedby="aide-mdp" />
           <span id="aide-mdp" className="aide">10 caractères minimum. Une phrase de plusieurs mots est facile à retenir et solide.</span>
         </div>
         <div className="champ" style={{ marginTop: "1rem" }}>
           <label htmlFor="confirmation">Nouveau mot de passe, encore une fois</label>
-          <input id="confirmation" name="confirmation" type="password" required minLength={10} maxLength={200} autoComplete="new-password" />
+          <ChampMotDePasse id="confirmation" name="confirmation" required minLength={10} maxLength={200} autoComplete="new-password" />
         </div>
       </fieldset>
       <div className="actions">

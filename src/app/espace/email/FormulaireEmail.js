@@ -1,5 +1,6 @@
 "use client";
 
+import ChampMotDePasse from "@/components/ChampMotDePasse";
 import { useActionState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
@@ -20,7 +21,7 @@ export default function FormulaireEmail({ email }) {
         </div>
         <div className="champ" style={{ marginTop: "1rem" }}>
           <label htmlFor="motDePasse">Mot de passe actuel</label>
-          <input id="motDePasse" name="motDePasse" type="password" required autoComplete="current-password" />
+          <ChampMotDePasse id="motDePasse" name="motDePasse" required autoComplete="current-password" />
           <span className="aide">Par sécurité, votre mot de passe est demandé.</span>
         </div>
       </fieldset>

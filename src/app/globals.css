@@ -189,6 +189,15 @@ input[type="password"], select, textarea {
   border: 1px solid #c9bba5; border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;
 }
 textarea { min-height: 8rem; resize: vertical; }
+.champ-mdp { position: relative; display: block; }
+.champ-mdp input { padding-right: 2.75rem; }
+.bouton-oeil {
+  position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
+  display: grid; place-items: center; width: 2.2rem; height: 2.2rem; padding: 0;
+  background: none; border: 0; border-radius: 6px; color: var(--texte-doux); cursor: pointer;
+}
+.bouton-oeil:hover { color: var(--texte); }
+.bouton-oeil:focus-visible { outline: 2px solid var(--bleu); outline-offset: 1px; }
 .case { display: flex; gap: 0.6rem; align-items: flex-start; margin-top: 0.75rem; }
 .case input { margin-top: 0.35rem; width: 1.1rem; height: 1.1rem; accent-color: var(--vert); flex: none; }
 .texte-legal {

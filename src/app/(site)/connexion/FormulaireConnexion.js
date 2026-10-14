@@ -1,5 +1,6 @@
 "use client";
 
+import ChampMotDePasse from "@/components/ChampMotDePasse";
 import Link from "next/link";
 import { useActionState } from "react";
 import { seConnecter } from "./actions";
@@ -21,7 +22,7 @@ export default function FormulaireConnexion({ suite }) {
         </div>
         <div className="champ" style={{ marginTop: "1rem" }}>
           <label htmlFor="motDePasse">Mot de passe</label>
-          <input id="motDePasse" name="motDePasse" type="password" required autoComplete="current-password" />
+          <ChampMotDePasse id="motDePasse" name="motDePasse" required autoComplete="current-password" />
         </div>
         <label className="case">
           <input type="checkbox" name="resterConnecte" />
