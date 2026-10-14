@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { accepterTextesSel, deposerAttestation, inscrireSel } from "@/app/sel/actions/inscription";
+import { accepterTextesSel, declarerAssurance, inscrireSel } from "@/app/sel/actions/inscription";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
-import { ChampDate } from "@/components/ChampsDate";
 
 function Textes({ textes }) {
   return textes.map((t) => (
@@ -28,44 +27,44 @@ function Textes({ textes }) {
   ));
 }
 
-function Attestation({ demain }) {
+// SEL-2, SEL-21 : déclaration sur l'honneur, sans document à fournir
+function Assurance({ valeurs }) {
   return (
     <fieldset>
-      <legend>Attestation d'assurance responsabilité civile</legend>
+      <legend>Assurance responsabilité civile</legend>
       <p className="meta">
-        Elle est exigée pour échanger dans le SEL (Règlement du SEL). Un membre du Bureau la vérifie, note sa date de
-        validité, puis <strong>supprime le fichier</strong>.
+        Elle est obligatoire pour échanger dans le SEL. Elle est souvent comprise dans l'assurance habitation : le numéro de
+        contrat figure sur votre avis d'échéance. Aucun document n'est demandé.
       </p>
-      <div className="champs">
+      <label className="case">
+        <input type="checkbox" name="possedeRc" required defaultChecked={!!valeurs} />
+        <span>Je possède une assurance responsabilité civile en cours de validité. <span className="obligatoire">*</span></span>
+      </label>
+      <div className="champs" style={{ marginTop: "1rem" }}>
         <div className="champ">
-          <label htmlFor="assureur">Assureur <span className="obligatoire">*</span></label>
-          <input id="assureur" name="assureur" type="text" required maxLength={100} placeholder="Ex. : MAIF, Groupama…" />
+          <label htmlFor="numeroPolice">Numéro de police (contrat) <span className="obligatoire">*</span></label>
+          <input id="numeroPolice" name="numeroPolice" type="text" required maxLength={60} defaultValue={valeurs?.numeroPolice ?? ""} />
         </div>
         <div className="champ">
-          <label htmlFor="valideJusquau">Valable jusqu'au <span className="obligatoire">*</span></label>
-          <ChampDate id="valideJusquau" name="valideJusquau" required min={demain} />
+          <label htmlFor="compagnie">Compagnie d'assurance <span className="obligatoire">*</span></label>
+          <input id="compagnie" name="compagnie" type="text" required maxLength={100} placeholder="Ex. : MAIF, Groupama…" defaultValue={valeurs?.compagnie ?? ""} />
         </div>
       </div>
       <div className="champ" style={{ marginTop: "1rem" }}>
-        <label htmlFor="fichier">Attestation (PDF, JPEG ou PNG, 5 Mo maximum) <span className="obligatoire">*</span></label>
-        <input id="fichier" name="fichier" type="file" required accept="application/pdf,image/jpeg,image/png" />
-        <span className="aide">Souvent incluse dans l'assurance habitation : demandez-la à votre assureur.</span>
+        <label htmlFor="adresseCompagnie">Adresse de la compagnie <span className="obligatoire">*</span></label>
+        <input id="adresseCompagnie" name="adresseCompagnie" type="text" required maxLength={200} defaultValue={valeurs?.adresseCompagnie ?? ""} />
       </div>
-      <label className="case">
-        <input type="checkbox" name="certifie" required />
-        <span>Je certifie que cette attestation est à mon nom et en cours de validité. <span className="obligatoire">*</span></span>
-      </label>
     </fieldset>
   );
 }
 
-export function FormulaireInscription({ textes, demain }) {
+export function FormulaireInscription({ textes }) {
   const [etat, action] = useActionState(inscrireSel, null);
   return (
     <form action={action} className="formulaire formulaire-large">
       <Retour etat={etat} />
       <Textes textes={textes} />
-      <Attestation demain={demain} />
+      <Assurance />
       <div className="actions">
         <BoutonEnvoi enCours="Envoi…">M'inscrire au SEL</BoutonEnvoi>
       </div>
@@ -73,14 +72,14 @@ export function FormulaireInscription({ textes, demain }) {
   );
 }
 
-export function FormulaireAttestation({ demain }) {
-  const [etat, action] = useActionState(deposerAttestation, null);
+export function FormulaireAssurance({ valeurs }) {
+  const [etat, action] = useActionState(declarerAssurance, null);
   return (
     <form action={action} className="formulaire formulaire-large">
       <Retour etat={etat} />
-      <Attestation demain={demain} />
+      <Assurance valeurs={valeurs} />
       <div className="actions">
-        <BoutonEnvoi enCours="Envoi…">Envoyer mon attestation</BoutonEnvoi>
+        <BoutonEnvoi>Enregistrer mon assurance</BoutonEnvoi>
       </div>
     </form>
   );

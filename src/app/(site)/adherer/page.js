@@ -25,7 +25,7 @@ export default async function Adherer({ searchParams }) {
       {raison === "sel" && (
         <div className="message-erreur" role="alert" style={{ marginBottom: "1.5rem" }}>
           {membre
-            ? "Le SEL est réservé aux adhérents à jour de leur cotisation : la vôtre n'est plus à jour. Réglez votre cotisation (modalités ci-dessous) ; un membre du Bureau l'enregistrera et le SEL vous sera de nouveau ouvert."
+            ? "Le SEL est réservé aux adhérents à jour de leur cotisation : la vôtre n'est plus à jour. Réglez votre cotisation (modalités ci-dessous) ; un administrateur l'enregistrera et le SEL vous sera de nouveau ouvert."
             : "Le SEL est réservé aux adhérents de La Fabrique : adhérez pour y accéder."}
         </div>
       )}
@@ -34,7 +34,7 @@ export default async function Adherer({ searchParams }) {
       <ol className="etapes">
         <li><strong>Je dépose ma demande</strong> en ligne avec ce formulaire.</li>
         <li><strong>Je règle ma cotisation</strong> hors du site (1 € minimum) : aucun paiement en ligne.</li>
-        <li><strong>Un membre du Bureau valide</strong> mon adhésion ; je reçois mon code et un lien pour créer mon mot de passe.</li>
+        <li><strong>Un administrateur valide</strong> mon adhésion ; je reçois mon code et un lien pour créer mon mot de passe.</li>
       </ol>
 
       <section className="carte carte-ocre" style={{ margin: "1.5rem 0" }}>

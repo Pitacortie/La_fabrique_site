@@ -24,10 +24,7 @@ export default function FormulaireConnexion({ suite }) {
           <label htmlFor="motDePasse">Mot de passe</label>
           <ChampMotDePasse id="motDePasse" name="motDePasse" required autoComplete="current-password" />
         </div>
-        <label className="case">
-          <input type="checkbox" name="resterConnecte" />
-          <span>Rester connecté pendant 30 jours</span>
-        </label>
+        <p className="refs">Par sécurité, vous êtes déconnecté après 5 minutes sans activité et à la fermeture du navigateur.</p>
       </fieldset>
       <div className="actions">
         <button type="submit" className="bouton" disabled={enCours}>

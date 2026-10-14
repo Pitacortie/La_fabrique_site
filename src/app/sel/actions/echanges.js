@@ -4,14 +4,15 @@ import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { dateHeureParis } from "@/lib/heure-paris";
 import { z } from "zod";
+import { alerter } from "@/lib/alertes";
 import { journaliser } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { urlDuSite } from "@/lib/email";
 import { exigerAccesSel } from "@/lib/sel/acces";
-import { emailLitige } from "@/lib/sel/modeles-email";
-import { notifierBureau, notifierEtape } from "@/lib/sel/notifications";
-import { ALERTE_BRIQUES, DUREE_MAX_MINUTES, VALEUR_MAX_BRIQUES, anonymatLeve, briquesPour, plancher, roles } from "@/lib/sel/regles";
-import { conversationDe } from "@/lib/sel/conversations";
+import { emailAlerteSolde, emailLitige } from "@/lib/sel/modeles-email";
+import { notifierEtape } from "@/lib/sel/notifications";
+import { ALERTE_BRIQUES, DUREE_MAX_MINUTES, SEUIL_BAS, VALEUR_MAX_BRIQUES, anonymatLeve, briquesPour, roles } from "@/lib/sel/regles";
+import { conversationDe, mineurConcerne } from "@/lib/sel/conversations";
 
 const ACTIFS = ["PROPOSE", "CONFIRME", "DECLARE"];
 
@@ -46,9 +47,10 @@ export async function proposerRendezVous(_etat, formData) {
     if (suis !== "beneficiaire") return { erreur: "C'est la personne qui reçoit le service qui propose le rendez-vous." };
     if (conversation.statut === "FERMEE") return { erreur: "Cette conversation est fermée." };
     if (await echangeActif(conversation.id)) return { erreur: "Un échange est déjà en cours dans cette conversation." };
-    // RG-14 : un échange en personne n'a lieu qu'après la levée d'anonymat
-    if (conversation.annonce.modalite === "PRESENTIEL" && !anonymatLeve(conversation)) {
-      return { erreur: "Pour un rendez-vous en personne, révélez d'abord vos identités l'un à l'autre." };
+    // RG-14 : la levée d'anonymat est obligatoire avant un échange en personne, et dès qu'un mineur est concerné
+    if (!anonymatLeve(conversation)) {
+      if (conversation.annonce.modalite === "PRESENTIEL") return { erreur: "Pour un rendez-vous en personne, révélez d'abord vos identités l'un à l'autre." };
+      if (await mineurConcerne(conversation)) return { erreur: "Un mineur est concerné par cet échange : révélez d'abord vos identités l'un à l'autre." };
     }
     const lu = schemaRdv.safeParse(Object.fromEntries(formData));
     if (!lu.success) return { erreur: lu.error.issues[0].message };
@@ -148,31 +150,33 @@ export async function confirmerEchange(_etat, formData) {
       const echange = await tx.echange.findUnique({ where: { id: echangeId } });
       if (!echange.briques) return { briques: 0 };
 
-      // SEL-22, RG-8 : le solde ne descend pas sous -120 (sauf dérogation)
-      const beneficiaire = await tx.alias.findUnique({ where: { id: alias.id } });
-      if (beneficiaire.soldeBriques - echange.briques < plancher(beneficiaire)) {
-        throw new Error(
-          `Votre solde (${beneficiaire.soldeBriques} briques) ne peut pas descendre sous ${plancher(beneficiaire)} briques. Contactez l'association pour une dérogation.`,
-        );
-      }
-      await tx.alias.update({ where: { id: alias.id }, data: { soldeBriques: { decrement: echange.briques } } });
+      // SEL-22 : aucun blocage, le solde peut descendre sous -120 ; le CA est simplement alerté
+      const beneficiaire = await tx.alias.update({ where: { id: alias.id }, data: { soldeBriques: { decrement: echange.briques } } });
       const prestataire = await tx.alias.update({ where: { id: prestataireId }, data: { soldeBriques: { increment: echange.briques } } });
       await tx.transactionBriques.create({
         data: { echangeId, montant: echange.briques, debiteId: alias.id, crediteId: prestataireId, libelle: conversation.annonce.titre.slice(0, 100) },
       });
-      return { briques: echange.briques, soldePrestataire: prestataire.soldeBriques };
+      return { briques: echange.briques, beneficiaire, prestataire };
     });
 
     await journaliser({ action: "sel.echange_termine", cibleType: "Echange", cibleId: echangeId, details: { briques: resultat.briques } });
-    if (resultat.soldePrestataire > ALERTE_BRIQUES) {
-      // RG-8 : au-delà de 600 briques, concertation du CA (sans sanction)
-      await journaliser({ action: "sel.alerte_solde", cibleType: "Alias", cibleId: prestataireId, details: { solde: resultat.soldePrestataire } });
-    }
+    if (resultat.briques) await alerterSoldes(resultat);
     await fin(conversation.id, prestataireId)();
     return { ok: resultat.briques ? `Échange terminé : ${resultat.briques} briques transférées. Merci !` : "Échange terminé. Merci !" };
   } catch (e) {
     unstable_rethrow(e); // laisse passer les redirections (ex. session expirée)
     return { erreur: e.message };
+  }
+}
+
+// SEL-22 : alerte au CA quand un solde franchit -120 (vers le bas) ou 600 (vers le haut). Sans sanction ni blocage.
+async function alerterSoldes({ briques, beneficiaire, prestataire }) {
+  const franchis = [];
+  if (beneficiaire.soldeBriques <= SEUIL_BAS && beneficiaire.soldeBriques + briques > SEUIL_BAS) franchis.push(beneficiaire);
+  if (prestataire.soldeBriques > ALERTE_BRIQUES && prestataire.soldeBriques - briques <= ALERTE_BRIQUES) franchis.push(prestataire);
+  for (const a of franchis) {
+    await journaliser({ action: "sel.alerte_solde", cibleType: "Alias", cibleId: a.id, details: { code: a.code, solde: a.soldeBriques } });
+    await alerter("SEL_SOLDE", emailAlerteSolde({ code: a.code, solde: a.soldeBriques, lien: `${await urlDuSite()}/admin/sel` }));
   }
 }
 
@@ -189,7 +193,7 @@ export async function contesterEchange(_etat, formData) {
     });
     if (count !== 1) return { erreur: "Cet échange ne peut plus être contesté." };
     await journaliser({ action: "sel.litige", cibleType: "Conversation", cibleId: conversation.id });
-    await notifierBureau(emailLitige({ lien: `${await urlDuSite()}/admin/sel` }));
+    await alerter("SEL_LITIGE", emailLitige({ lien: `${await urlDuSite()}/admin/sel` }));
     await fin(conversation.id, prestataireId)();
     return { ok: "Votre désaccord est transmis à l'association, qui vous proposera une médiation." };
   } catch (e) {

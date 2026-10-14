@@ -3,35 +3,25 @@ import { cache } from "react";
 import { getMembreConnecte } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { textesAAccepter } from "@/lib/textes";
-import { TEXTES_SEL } from "./regles";
-
-const aujourdhui = () => {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  return d;
-};
+import { TEXTES_SEL, limiteCotisationSel } from "./regles";
 
 // État d'accès au SEL (RG-2, RG-15, SEL-18) : adhérent actif, cotisation à jour, inscription SEL active,
-// attestation RC validée et en cours de validité, Charte et Règlement du SEL acceptés dans leur version en vigueur.
+// Charte et Règlement du SEL acceptés dans leur version en vigueur, assurance RC déclarée (SEL-2, SEL-21).
 export const etatSel = cache(async function etatSel() {
   const membre = await getMembreConnecte();
   if (!membre) return { code: "connexion" };
 
-  const jour = aujourdhui();
-  const cotisation = await prisma.cotisation.findFirst({ where: { membreId: membre.id, valideJusquau: { gte: jour } } });
+  const cotisation = await prisma.cotisation.findFirst({ where: { membreId: membre.id, valideJusquau: { gte: limiteCotisationSel() } } });
   if (!cotisation) return { code: "cotisation", membre };
 
   const inscription = await prisma.inscriptionSel.findUnique({ where: { membreId: membre.id } });
-  const attestation = await prisma.attestationRc.findFirst({ where: { membreId: membre.id }, orderBy: { createdAt: "desc" } });
   const textes = await textesAAccepter(membre.id, TEXTES_SEL);
-  const base = { membre, inscription, attestation, textes };
+  const base = { membre, inscription, textes, assurance: inscription?.assuranceRc ?? null };
 
   if (!inscription) return { code: "inscription", ...base };
   if (inscription.statut === "SUSPENDUE") return { code: "suspendu", ...base };
   if (textes.length) return { code: "textes", ...base };
-  if (!attestation || attestation.statut === "REFUSEE") return { code: "attestation", ...base };
-  if (attestation.statut === "EN_ATTENTE") return { code: "verification", ...base };
-  if (attestation.valideJusquau < jour) return { code: "attestation_expiree", ...base };
+  if (!inscription.assuranceRc) return { code: "assurance", ...base };
   return { code: "ok", ...base, alias: membre.alias };
 });
 

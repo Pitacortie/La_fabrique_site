@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { TEXTES_ADHESION, adresseAssociation, age, emailsBureau, modalitesPaiement } from "@/lib/adhesion";
+import { AGE_MINIMUM, TEXTES_ADHESION, age, modalitesPaiement } from "@/lib/adhesion";
+import { alerter } from "@/lib/alertes";
 import { journaliser } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { envoyerEmail, urlDuSite } from "@/lib/email";
@@ -28,7 +29,8 @@ const schema = z.object({
     .refine((v) => {
       const a = age(v);
       return a >= 0 && a <= 120;
-    }, "Date de naissance invalide."),
+    }, "Date de naissance invalide.")
+    .refine((v) => age(v) >= AGE_MINIMUM, `L'adhésion est possible à partir de ${AGE_MINIMUM} ans.`),
   adresse: texte("Adresse", 200),
   codePostal: chaine("Code postal : champ obligatoire.").trim().regex(/^\d{5}$/, "Le code postal doit comporter 5 chiffres."),
   commune: texte("Commune"),
@@ -128,9 +130,6 @@ export async function deposerDemande(_etat, formData) {
 
   await envoyerEmail({ a: d.email, ...confirmation }).catch((e) => console.error("Courriel non envoyé :", e.message));
   const alerte = emailNouvelleDemande({ nomComplet: `${d.prenom} ${d.nom}`, commune: d.commune, mineur, lien: `${site}/admin/demandes/${demande.id}` });
-  const bureau = await emailsBureau();
-  for (const a of bureau.length ? bureau : [await adresseAssociation()]) {
-    await envoyerEmail({ a, ...alerte }).catch((e) => console.error("Courriel non envoyé :", e.message));
-  }
+  await alerter("ADHESION", alerte);
   return reponse;
 }

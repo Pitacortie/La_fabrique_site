@@ -1,4 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+
+import { limiteCotisationSel } from "./regles";
 
 const aujourdhui = () => {
   const d = new Date();
@@ -6,15 +9,14 @@ const aujourdhui = () => {
   return d;
 };
 
-// SEL-19 : les annonces d'un membre dont la cotisation ou l'attestation a expiré sont masquées automatiquement.
+// SEL-19 : les annonces d'un membre suspendu, sans cotisation à jour ou sans assurance déclarée sont masquées automatiquement.
 export function filtreAuteurEnRegle() {
-  const jour = aujourdhui();
+  const jour = limiteCotisationSel();
   return {
     membre: {
       statut: "ACTIF",
-      inscriptionSel: { statut: "ACTIVE" },
+      inscriptionSel: { statut: "ACTIVE", NOT: { assuranceRc: { equals: Prisma.DbNull } } },
       cotisations: { some: { valideJusquau: { gte: jour } } },
-      attestationsRc: { some: { statut: "VALIDEE", valideJusquau: { gte: jour } } },
     },
   };
 }
@@ -37,7 +39,6 @@ export const selectAnnonce = {
   description: true,
   dureeEstimee: true,
   valeurBriques: true,
-  zone: true,
   modalite: true,
   disponibilites: true,
   dateFin: true,
@@ -49,22 +50,20 @@ export const selectAnnonce = {
   rubrique: { select: { id: true, code: true, libelle: true, rappel: true } },
 };
 
-export function listerAnnonces({ type, q, rubrique, nature, modalite, zone }) {
+export function listerAnnonces({ type, q, rubrique, nature, modalite }) {
   const recherche = q?.trim().slice(0, 100);
   const et = [filtreAnnoncesVisibles(), { type }];
   if (rubrique) et.push({ rubrique: { code: rubrique } });
   if (nature) et.push({ nature });
   if (modalite) et.push({ modalite });
-  if (zone?.trim()) et.push({ zone: { contains: zone.trim().slice(0, 60), mode: "insensitive" } });
   if (recherche) {
-    // Chaque mot doit apparaître dans le titre, la description, les mots-clés, la zone ou la rubrique
+    // Chaque mot doit apparaître dans le titre, la description, les mots-clés ou la rubrique
     for (const mot of recherche.split(/\s+/).slice(0, 6)) {
       et.push({
         OR: [
           { titre: { contains: mot, mode: "insensitive" } },
           { description: { contains: mot, mode: "insensitive" } },
           { motsCles: { contains: mot, mode: "insensitive" } },
-          { zone: { contains: mot, mode: "insensitive" } },
           { rubrique: { libelle: { contains: mot, mode: "insensitive" } } },
         ],
       });

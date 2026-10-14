@@ -9,4 +9,4 @@ Thumbs.db
 /uploads/
 .next-test/
 tests/.tmp/
-prive/
+prive/        # ancien stockage des attestations (plus utilisé)

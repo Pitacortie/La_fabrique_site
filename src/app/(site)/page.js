@@ -1,10 +1,9 @@
 import Link from "next/link";
-import ArticleCard from "@/components/ArticleCard";
 import FabricationCard from "@/components/FabricationCard";
 import BlocEditable from "@/components/edition/BlocEditable";
 import FabricationsEditables from "@/components/edition/FabricationsEditables";
-import { getArticlesPublies, getFabricationsVisibles, getToutesFabrications } from "@/lib/articles";
-import { getMembreConnecte, peutEditerSite, peutPublier } from "@/lib/auth";
+import { getFabricationsVisibles, getToutesFabrications } from "@/lib/articles";
+import { peutEditerSite } from "@/lib/auth";
 import { getContenus } from "@/lib/contenus";
 import { site } from "@/lib/site";
 
@@ -17,11 +16,9 @@ const actions = [
 
 export default async function Accueil() {
   const edition = await peutEditerSite();
-  const [textes, derniers, fabrications, membre] = await Promise.all([
+  const [textes, fabrications] = await Promise.all([
     getContenus(["accueil.intro", "accueil.fabrications", "accueil.encart"]),
-    getArticlesPublies({ take: 3 }), // ACC-5 : les trois derniers articles publiés
     edition ? getToutesFabrications() : getFabricationsVisibles(),
-    getMembreConnecte(),
   ]);
 
   return (
@@ -50,31 +47,10 @@ export default async function Accueil() {
         </div>
       </section>
 
-      <section className="section conteneur">
-        <div className="coque-entete">
-          <h2>Dernières actualités</h2>
-          <span className="actions">
-            {edition && peutPublier(membre) && (
-              <Link href="/admin/articles/nouveau" className="bouton bouton-secondaire">+ Nouvel article</Link>
-            )}
-            <Link href="/actualites">Toutes les actualités et la galerie →</Link>
-          </span>
-        </div>
-        {derniers.length ? (
-          <div className="grille">
-            {derniers.map((a) => (
-              <ArticleCard key={a.id} article={a} />
-            ))}
-          </div>
-        ) : (
-          <p>Les premières actualités arrivent bientôt.</p>
-        )}
-      </section>
-
       {(fabrications.length > 0 || edition) && (
         <section className="section section-alt">
           <div className="conteneur">
-            <h2>Nos « Fabrications »</h2>
+            <h2>Nos initiatives</h2>
             <BlocEditable cle="accueil.fabrications" texte={textes["accueil.fabrications"]} className="chapo" />
             {edition ? (
               <FabricationsEditables fabrications={fabrications} />
@@ -86,7 +62,7 @@ export default async function Accueil() {
               </div>
             )}
             <div className="actions" style={{ marginTop: "1.5rem" }}>
-              <Link href="/espace/fabrications" className="bouton bouton-secondaire">Accéder à mes services</Link>
+              <Link href="/espace/initiatives" className="bouton bouton-secondaire">Accéder aux initiatives (adhérents)</Link>
             </div>
           </div>
         </section>
@@ -94,9 +70,9 @@ export default async function Accueil() {
 
       <section className="section conteneur">
         <div className="encart">
-          <strong>Vos attentes, vos projets.</strong>
+          <strong>Boîte à idées.</strong>
           <BlocEditable cle="accueil.encart" texte={textes["accueil.encart"]} />
-          <Link href="/contact">Nous écrire →</Link>
+          <Link href="/contact?sujet=projet">Déposer une idée →</Link>
         </div>
       </section>
     </>

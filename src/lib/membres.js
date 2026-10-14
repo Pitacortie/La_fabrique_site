@@ -1,5 +1,5 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { supprimerFichierPrive } from "@/lib/fichiers-prives";
 
 // Ce que le membre a laissé dans la vie de l'association, et qui concerne d'autres personnes.
 export async function historiqueMembre(membreId) {
@@ -17,15 +17,9 @@ export async function historiqueMembre(membreId) {
   return { alias, transactions, echanges, messages, conversations, articles, cotisationsSaisies, vide: total === 0 };
 }
 
-async function supprimerAttestations(tx, membreId) {
-  const attestations = await tx.attestationRc.findMany({ where: { membreId, fichier: { not: null } } });
-  return attestations.map((a) => a.fichier);
-}
-
 // Suppression complète : uniquement pour un membre sans historique partagé (compte de test, jamais utilisé).
 async function supprimerCompletement(membreId, alias) {
-  const fichiers = await prisma.$transaction(async (tx) => {
-    const fichiers = await supprimerAttestations(tx, membreId);
+  await prisma.$transaction(async (tx) => {
     if (alias) {
       await tx.signalementSel.deleteMany({ where: { OR: [{ signaleurId: alias.id }, { annonce: { auteurId: alias.id } }] } });
       await tx.annonce.deleteMany({ where: { auteurId: alias.id } });
@@ -33,7 +27,6 @@ async function supprimerCompletement(membreId, alias) {
     await tx.acceptation.deleteMany({ where: { OR: [{ membreId }, { demande: { membreId } }] } });
     await tx.demandeAdhesion.deleteMany({ where: { membreId } });
     await tx.cotisation.deleteMany({ where: { membreId } });
-    await tx.attestationRc.deleteMany({ where: { membreId } });
     await tx.signalementBug.updateMany({ where: { membreId }, data: { membreId: null } });
     // Traces d'administration conservées, détachées de la personne
     await tx.journalAudit.updateMany({ where: { acteurId: membreId }, data: { acteurId: null } });
@@ -41,18 +34,14 @@ async function supprimerCompletement(membreId, alias) {
     await tx.demandeAdhesion.updateMany({ where: { decideParId: membreId }, data: { decideParId: null } });
     // Sessions, liens, inscription au SEL et alias sont supprimés en cascade
     await tx.membre.delete({ where: { id: membreId } });
-    return fichiers;
   });
-  for (const f of fichiers) await supprimerFichierPrive(f);
 }
 
 // Anonymisation : l'identité est effacée, le compte clôturé ; l'historique partagé (échanges, briques, messages)
 // reste cohérent pour les autres membres, sous le seul code de la personne. Le solde rejoint le compte de solidarité (RG-17).
 async function anonymiser(membreId, alias) {
   const maintenant = new Date();
-  const fichiers = await prisma.$transaction(async (tx) => {
-    const fichiers = await supprimerAttestations(tx, membreId);
-    await tx.attestationRc.updateMany({ where: { membreId }, data: { fichier: null } });
+  await prisma.$transaction(async (tx) => {
     if (alias) {
       const a = await tx.alias.findUnique({ where: { id: alias.id } });
       if (a.soldeBriques !== 0) {
@@ -74,7 +63,7 @@ async function anonymiser(membreId, alias) {
         data: { statut: "FERMEE", fermeeParId: a.id },
       });
     }
-    await tx.inscriptionSel.updateMany({ where: { membreId }, data: { statut: "SUSPENDUE", motifSuspension: "Compte clôturé" } });
+    await tx.inscriptionSel.updateMany({ where: { membreId }, data: { statut: "SUSPENDUE", motifSuspension: "Compte clôturé", assuranceRc: Prisma.DbNull } });
     // La demande d'adhésion contient l'identité complète : supprimée ; les acceptations (preuves) restent liées au membre
     await tx.acceptation.deleteMany({ where: { membreId: null, demande: { membreId } } });
     await tx.acceptation.updateMany({ where: { demande: { membreId } }, data: { demandeId: null } });
@@ -98,14 +87,11 @@ async function anonymiser(membreId, alias) {
         responsableTelephone: null,
         droitImage: false,
         role: "ADHERENT",
-        peutPublier: false,
         statut: "CLOTURE",
         motifStatut: `Supprimé le ${maintenant.toLocaleDateString("fr-FR")}`,
       },
     });
-    return fichiers;
   });
-  for (const f of fichiers) await supprimerFichierPrive(f);
 }
 
 // Supprime le membre s'il n'a aucun historique partagé, sinon l'anonymise. Renvoie la méthode employée.

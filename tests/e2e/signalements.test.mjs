@@ -20,9 +20,9 @@ describe("bouton « Signaler un bug »", () => {
     expect(s.statut).toBe("NOUVEAU");
   });
 
-  it("prévient l'association par courriel", async () => {
+  it("prévient par courriel ceux qui ont activé l'alerte", async () => {
     await pause(200);
-    const c = dernierCourriel("contact@lafabriquedemenesplet.fr");
+    const c = dernierCourriel(COMPTES.bureau.email);
     expect(c.objet).toBe("Bug signalé sur /actualites?filtre=a-venir");
     expect(c.texte).toContain("ne change rien sur mon téléphone");
   });

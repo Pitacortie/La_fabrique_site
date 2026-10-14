@@ -8,7 +8,7 @@ import { libellesNature } from "@/lib/sel/regles";
 import { ChampDate } from "@/components/ChampsDate";
 
 // Publication ou modification d'une annonce (SEL-5). Les champs utiles changent selon la nature.
-export default function FormulaireAnnonce({ rubriques, annonce, zoneParDefaut = "" }) {
+export default function FormulaireAnnonce({ rubriques, annonce }) {
   const [etat, action] = useActionState(annonce ? modifierAnnonce : publierAnnonce, null);
   const [nature, setNature] = useState(annonce?.nature ?? "SERVICE");
   const [rubriqueId, setRubriqueId] = useState(annonce?.rubriqueId ?? "");
@@ -86,19 +86,15 @@ export default function FormulaireAnnonce({ rubriques, annonce, zoneParDefaut = 
       </fieldset>
 
       <fieldset>
-        <legend>Où et quand ?</legend>
+        <legend>Comment et quand ?</legend>
         <div className="champs">
-          <div className="champ">
-            <label htmlFor="zone">Commune ou secteur <span className="obligatoire">*</span></label>
-            <input id="zone" name="zone" type="text" required minLength={2} maxLength={60} defaultValue={annonce?.zone ?? zoneParDefaut} />
-            <span className="aide">Jamais d'adresse précise.</span>
-          </div>
           <div className="champ">
             <label htmlFor="modalite">Modalité <span className="obligatoire">*</span></label>
             <select id="modalite" name="modalite" required defaultValue={annonce?.modalite ?? "PRESENTIEL"}>
-              <option value="PRESENTIEL">En personne</option>
-              <option value="DISTANCE">À distance possible (visio, téléphone…)</option>
+              <option value="PRESENTIEL">En présentiel</option>
+              <option value="DISTANCE">À distance (visio, téléphone…)</option>
             </select>
+            <span className="aide">En présentiel, vos identités sont révélées l'un à l'autre avant le rendez-vous.</span>
           </div>
         </div>
         <div className="champs" style={{ marginTop: "1rem" }}>
@@ -118,7 +114,14 @@ export default function FormulaireAnnonce({ rubriques, annonce, zoneParDefaut = 
       </fieldset>
 
       <div className="actions">
-        <BoutonEnvoi enCours="Publication…">{annonce ? "Enregistrer les modifications" : "Publier l'annonce"}</BoutonEnvoi>
+        {!annonce || annonce.statut === "BROUILLON" ? (
+          <>
+            <BoutonEnvoi name="intention" value="publier" enCours="Publication…">Publier l'annonce</BoutonEnvoi>
+            <BoutonEnvoi name="intention" value="brouillon" className="bouton bouton-secondaire">Enregistrer en brouillon</BoutonEnvoi>
+          </>
+        ) : (
+          <BoutonEnvoi>Enregistrer les modifications</BoutonEnvoi>
+        )}
       </div>
     </form>
   );

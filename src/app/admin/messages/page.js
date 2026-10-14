@@ -13,7 +13,7 @@ const STATUTS = {
   TRAITE: { texte: "Traité", classe: "" },
 };
 
-// ADM-4 : messages reçus via la page Contacts (dont les propositions « Vos attentes, vos projets »).
+// ADM-4 : messages reçus via la page Contacts (dont les propositions de la « Boîte à idées »).
 export default async function Messages({ searchParams }) {
   await exigerAdmin();
   const { tous, id, repondu } = await searchParams;

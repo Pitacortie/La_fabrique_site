@@ -7,7 +7,7 @@ import FormulaireContact from "./FormulaireContact";
 
 export const metadata = { title: "Contacts" };
 
-// CTC-1 : formulaire + téléphone. « ?sujet=projet » préselectionne l'objet (PRJ-2 : « Vos attentes » pour les non-adhérents).
+// CTC-1 : formulaire + téléphone. « ?sujet=projet » préselectionne l'objet (PRJ-2 : « Boîte à idées »).
 export default async function Contact({ searchParams }) {
   const { sujet = "question" } = await searchParams;
   const membre = await getMembreConnecte();

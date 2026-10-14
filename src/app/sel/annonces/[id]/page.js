@@ -9,11 +9,11 @@ import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { exigerAccesSel } from "@/lib/sel/acces";
 import { filtreAnnoncesVisibles, selectAnnonce } from "@/lib/sel/donnees";
-import { libellesModalite, libellesNature, libellesType } from "@/lib/sel/regles";
+import { libellesModalite, libellesNature, libellesStatutAnnonce, libellesType } from "@/lib/sel/regles";
 
 export default async function Annonce({ params, searchParams }) {
   const { id } = await params;
-  const { publiee } = await searchParams;
+  const { publiee, brouillon } = await searchParams;
   const { alias } = await exigerAccesSel(`/sel/annonces/${id}`);
 
   const annonce = await prisma.annonce.findUnique({ where: { id }, select: selectAnnonce });
@@ -33,12 +33,13 @@ export default async function Annonce({ params, searchParams }) {
     <>
       <p><Link href={annonce.type === "OFFRE" ? "/sel" : "/sel/demandes"}>← {annonce.type === "OFFRE" ? "Services proposés" : "Services demandés"}</Link></p>
       {publiee && <div className="message-info" role="status" style={{ marginBottom: "1rem" }}>Votre annonce est publiée.</div>}
+      {brouillon && <div className="message-info" role="status" style={{ marginBottom: "1rem" }}>Brouillon enregistré : il n'est visible que de vous. Publiez-le quand il est prêt.</div>}
 
       <article className="sel-fiche">
         <p className="meta">
           <span className="badge badge-neutre">{annonce.rubrique.libelle}</span> <span className="badge">{libellesNature[annonce.nature]}</span>{" "}
           <span className="badge badge-ocre">{libellesType[annonce.type]}</span>
-          {annonce.statut !== "PUBLIEE" && <> <span className="badge badge-terracotta">{annonce.statut === "MASQUEE" ? "Masquée par la modération" : "Close"}</span></>}
+          {annonce.statut !== "PUBLIEE" && <> <span className={`badge ${libellesStatutAnnonce[annonce.statut].classe}`}>{libellesStatutAnnonce[annonce.statut].texte}</span></>}
         </p>
         <h1>{annonce.titre}</h1>
         <p className="meta">
@@ -51,7 +52,6 @@ export default async function Annonce({ params, searchParams }) {
             {annonce.rubrique.rappel && <p className="encart">⚠️ {annonce.rubrique.rappel}</p>}
           </div>
           <dl className="liste-def carte">
-            <dt>Où</dt><dd>📍 {annonce.zone}</dd>
             <dt>Comment</dt><dd>{libellesModalite[annonce.modalite]}</dd>
             {valeur && (<><dt>Valeur</dt><dd>{valeur}</dd></>)}
             {annonce.disponibilites && (<><dt>Disponibilités</dt><dd>{annonce.disponibilites}</dd></>)}
@@ -71,7 +71,9 @@ export default async function Annonce({ params, searchParams }) {
               <form action={changerStatutAnnonce}>
                 <input type="hidden" name="id" value={id} />
                 <input type="hidden" name="statut" value={annonce.statut === "PUBLIEE" ? "CLOTUREE" : "PUBLIEE"} />
-                <BoutonEnvoi className="bouton bouton-secondaire">{annonce.statut === "PUBLIEE" ? "Clore l'annonce" : "Republier l'annonce"}</BoutonEnvoi>
+                <BoutonEnvoi className={annonce.statut === "BROUILLON" ? "bouton" : "bouton bouton-secondaire"}>
+                  {{ PUBLIEE: "Clore l'annonce", BROUILLON: "Publier l'annonce", CLOTUREE: "Republier l'annonce" }[annonce.statut]}
+                </BoutonEnvoi>
               </form>
             </div>
           )}

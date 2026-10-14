@@ -40,7 +40,7 @@ export async function enregistrerCotisation(_etat, formData) {
 // Envoi manuel des rappels (le même envoi a lieu chaque matin si la tâche quotidienne est configurée).
 export async function lancerRappels() {
   const bureau = await exigerBureau();
-  if (!anneeARenouveler()) return { erreur: "Les rappels ne partent qu'en période de renouvellement, du 1er décembre au 31 janvier." };
+  if (!anneeARenouveler()) return { erreur: "Les rappels ne partent qu'en période de renouvellement : du 1er décembre au 31 janvier, puis pendant le mois qui suit." };
   const r = await envoyerRappelsCotisation();
   await journaliser({ acteurId: bureau.id, action: "cotisation.rappels_envoyes", cibleType: "Systeme", details: r });
   revalidatePath("/admin/cotisations");

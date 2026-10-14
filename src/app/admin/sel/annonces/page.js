@@ -13,7 +13,8 @@ export default async function AnnoncesSel({ searchParams }) {
   await exigerAdmin();
   const { masquees } = await searchParams;
   const annonces = await prisma.annonce.findMany({
-    where: masquees ? { statut: "MASQUEE" } : { statut: { not: "MASQUEE" } },
+    // Les brouillons restent privés : la modération ne voit que ce qui a été publié
+    where: masquees ? { statut: "MASQUEE" } : { statut: { notIn: ["MASQUEE", "BROUILLON"] } },
     orderBy: { createdAt: "desc" },
     take: 200,
     include: { auteur: { select: { code: true } }, rubrique: { select: { libelle: true } }, _count: { select: { signalements: true } } },

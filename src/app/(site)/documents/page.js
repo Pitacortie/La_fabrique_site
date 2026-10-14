@@ -5,8 +5,9 @@ import { getTextesEnVigueur } from "@/lib/textes";
 export const metadata = { title: "Statuts, règlement et charte" };
 
 const TYPES = ["STATUTS", "REGLEMENT_INTERIEUR", "CHARTE_NEUTRALITE"];
+const ADRESSES = { STATUTS: "statuts", REGLEMENT_INTERIEUR: "reglement-interieur", CHARTE_NEUTRALITE: "charte-neutralite" };
 
-// PRE-5 : textes en vigueur, consultables en ligne (version et date gérées dans la console, ADM-11).
+// PRE-2, PRE-5 : textes en vigueur, en consultation et en téléchargement (version et date gérées dans la console, ADM-11).
 export default async function Documents() {
   const textes = await getTextesEnVigueur(TYPES);
 
@@ -25,7 +26,12 @@ export default async function Documents() {
                   {t ? ` · version ${t.version}, en vigueur depuis le ${formatDate(t.enVigueurLe)}` : " · bientôt disponible"}
                 </span>
               </summary>
-              {t && <pre className="texte-legal texte-complet">{t.contenu}</pre>}
+              {t && (
+                <>
+                  <p><a href={`/documents/${ADRESSES[type]}`} download>Télécharger ce texte</a></p>
+                  <pre className="texte-legal texte-complet">{t.contenu}</pre>
+                </>
+              )}
             </details>
           );
         })}

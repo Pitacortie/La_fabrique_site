@@ -76,33 +76,42 @@ Les courriels sont lus dans le journal du serveur de test (`tests/.tmp/serveur.l
 | `tests/unit/*` | adresses d'articles, dates, limites de débit, IP derrière un proxy, chemins des photos, courriels |
 | `pages-publiques` | toutes les pages, 404, en-têtes de sécurité, polices locales, textes officiels, filtres |
 | `acces` | qui peut ouvrir quelle page (visiteur, adhérent, administrateur, Bureau) |
-| `connexion` | identifiants, limites d'essais, « rester connecté », redirections, déconnexion |
+| `connexion` | identifiants, limites d'essais, déconnexion après 5 minutes d'inactivité, redirections |
 | `mots-de-passe` | changement, mot de passe oublié, liens à usage unique et expirés |
 | `coordonnees` | validation, droit à l'image journalisé |
-| `edition` | crayons ✏️, Nos Fabrications, requêtes rejouées par un non-admin |
+| `edition` | crayons ✏️, Nos initiatives, requêtes rejouées par un non-admin |
 | `articles` | brouillon, photos (redimensionnement, texte alternatif, droit à l'image), publication, retrait |
-| `textes-officiels` | versions, dates d'entrée en vigueur, réservé au Bureau |
+| `textes-officiels` | versions, dates d'entrée en vigueur, réservé aux administrateurs |
 | `signalements` | bouton « Signaler un bug », anti-robot, traitement dans la console |
-| `adhesion` | demande (cases obligatoires, mineurs, doublons), validation par le Bureau, activation, refus |
+| `adhesion` | demande (cases obligatoires, mineurs, doublons), validation, activation, refus non motivé |
 | `contact` | formulaire Contacts, accusé de réception, réponse depuis la console |
 | `compte` | changement d'adresse e-mail, nouvelle acceptation quand un texte change |
-| `rappels` | tâches quotidiennes : rappels de cotisation (dates simulées), ménage |
-| `sel` | accès, inscription et assurance, annonces, recherche, anonymat, messagerie, rendez-vous, briques, solde minimum, litiges, modération |
+| `rappels` | tâches quotidiennes : rappels de cotisation (dates simulées), classement des demandes, durées de conservation, ménage |
+| `sel` | accès, inscription et assurance déclarative, annonces et brouillons, recherche, anonymat, messagerie, rendez-vous, briques, alertes de solde, solidarité, litiges, modération |
+| `agenda-gazette` | agenda (liste et calendrier du mois), gazette (numéros PDF, archives) |
+| `membres` | liste, fiche, suspension, suppression ou anonymisation |
+| `alertes` | alertes e-mail choisies personne par personne |
 
 ## Le SEL (`/sel`)
 
 Espace à part, réservé aux adhérents à jour de cotisation, inscrits au SEL (Charte et Règlement du SEL acceptés)
-et dont l'attestation d'assurance RC a été vérifiée par un administrateur. Sinon : connexion, page Adhérer
-(message rouge) ou page d'inscription, selon le cas. La présentation publique est sur `/le-sel`.
+et ayant déclaré une assurance responsabilité civile (numéro de police, nom et adresse de la compagnie ; aucun
+document, aucune vérification). Sinon : connexion, page Adhérer (message rouge) ou page d'inscription, selon le
+cas. La présentation publique est sur `/le-sel`. Après le 31 janvier, l'accès est conservé 30 jours pour laisser
+le temps de renouveler la cotisation.
 
 - **Anonymat** : annonces, messages et échanges ne référencent que le code (`Alias`), jamais l'identité.
-  Les noms ne sont révélés qu'avec l'accord des deux personnes, obligatoire avant un rendez-vous en personne.
+  Nom, prénom et adresse ne sont révélés qu'avec l'accord des deux personnes, obligatoire avant un rendez-vous en
+  personne et dès qu'un mineur est concerné. Chaque levée est journalisée (qui, quand, pourquoi).
 - **Échange** : le bénéficiaire propose un rendez-vous (date, heure de Ménesplet, lieu) → le prestataire confirme
   → après le service, le prestataire déclare le temps passé → le bénéficiaire confirme : les briques sont
-  transférées (1 minute = 1 brique), avec une ligne dans `TransactionBriques`. Solde minimum -120 (dérogation
-  possible), alerte au-delà de 600. Une contestation ouvre un litige tranché dans la console.
-- **Attestations d'assurance** : stockées dans `prive/` (hors git, jamais servies publiquement), supprimées dès
-  la vérification. En production, ce dossier doit être sur un disque persistant.
+  transférées (1 minute = 1 brique), avec une ligne dans `TransactionBriques`. Aucun blocage ni plafond : le CA
+  est alerté quand un solde atteint -120 ou dépasse 600. Une contestation ouvre un litige tranché dans la console.
+- **Annonces** : brouillon possible avant publication ; aucune localisation, seulement « en présentiel » ou
+  « à distance ».
+- **Compte d'urgence et de solidarité** : en briques uniquement, sans alias (`debiteId` ou `crediteId` à `null`
+  dans `TransactionBriques`). Alimenté par les dons des membres (`/sel/briques`) et les soldes des comptes
+  clôturés ; les administrateurs s'en servent pour aider un membre (`/admin/sel/solidarite`).
 - **Données de démo** : `npm run db:demo` crée deux adhérents prêts pour le SEL, avec une annonce chacun.
 
 ## Courriels automatiques
@@ -111,21 +120,24 @@ et dont l'attestation d'assurance RC a été vérifiée par un administrateur. S
 | --- | --- | --- |
 | Demande d'adhésion déposée | postulant / Bureau | confirmation + modalités de paiement / alerte « nouvelle demande » |
 | Demande validée | nouveau membre | code personnel + lien d'activation (7 jours) |
-| Demande refusée | postulant | courriel poli, avec le motif s'il est indiqué |
+| Demande refusée | postulant | courriel poli, sans motif (une note interne reste dans la console) |
 | Mot de passe oublié | membre | lien de réinitialisation (1 heure) |
 | Mot de passe ou e-mail modifié | membre | alerte de sécurité |
 | Changement d'adresse | nouvelle adresse | lien de confirmation (1 heure) |
 | Message via Contacts | association / expéditeur | message (« Répondre » écrit à l'expéditeur) / accusé de réception |
 | Réponse depuis la console | expéditeur | réponse au nom de l'association |
-| 1er décembre → 31 janvier | membres non renouvelés | rappel de cotisation (au plus tous les 14 jours) |
-| Bug signalé | association | contenu du signalement |
+| 1er décembre → fin février | membres non renouvelés | rappel de cotisation (au plus tous les 14 jours ; deux rappels après le 31 janvier) |
+| Inscription au SEL | membre | bienvenue dans le SEL |
+| Alertes (demande, contact, bug, SEL) | administrateurs qui les ont activées | voir « Alertes par e-mail » dans la console ; aucune n'est active par défaut |
 
 Sans `SMTP_HOST`, les courriels sont affichés dans le terminal au lieu d'être envoyés.
 Les modalités de paiement se modifient au crayon ✏️ sur la page Adhérer.
 
 ## Tâches quotidiennes
 
-Rappels de cotisation et ménage (sessions et liens expirés) : `POST /api/taches/quotidiennes`
+Rappels de cotisation, demandes sans cotisation depuis un mois classées sans suite, durées de conservation
+(journal 5 ans, comptes clôturés ou inactifs 5 ans, demandes refusées 1 an, conversations du SEL 1 an après
+leur clôture) et ménage (sessions et liens expirés) : `POST /api/taches/quotidiennes`
 avec l'en-tête `Authorization: Bearer <TACHES_SECRET>`. Le plan gratuit de Render n'ayant pas de tâches
 planifiées, c'est GitHub qui l'appelle chaque matin (`.github/workflows/taches-quotidiennes.yml`) :
 dans GitHub › Settings › Secrets and variables › Actions, créer `SITE_URL` et `TACHES_SECRET`
@@ -167,9 +179,11 @@ src/
 
 - **Identité et alias séparés** : les futures tables du SEL ne référencent que `Alias`, jamais `Membre`.
 - **Acceptations versionnées** : chaque case cochée crée une `Acceptation` liée à une version précise de `TexteJuridique`.
-- **Aucun paiement en ligne** : la cotisation est saisie par un membre du Bureau (`Cotisation.saisieParId`).
+- **Aucun paiement en ligne** : la cotisation est saisie par un administrateur (`Cotisation.saisieParId`).
+- **Droits** : tous les administrateurs (membres du Bureau compris) ont les mêmes droits ; seuls eux publient au nom de l'association.
+- **Sessions** : déconnexion après 5 minutes sans activité (la page envoie un signal tant qu'on s'en sert) et à la fermeture du navigateur.
 - **Traçabilité** : décisions d'adhésion, accès aux identités et publications passent par `JournalAudit`.
 - **Neutralité** : aucun contenu partisan ou électoral (statuts, art. 3 et 19).
-- **Photos** : stockées dans `uploads/` (hors git), servies par `/medias/…`. En production, ce dossier doit être sur un disque persistant.
-- **Édition sur place** : connecté en administrateur, les textes et les services « Nos Fabrications » se modifient directement sur les pages publiques (crayons ✏️). Pour rendre un nouveau texte modifiable : le déclarer dans `src/lib/contenus.js` et l'afficher avec `<BlocEditable>`.
+- **Photos et gazette** : stockées dans `uploads/` (hors git), servies par `/medias/…` (WebP et PDF). En production, ce dossier doit être sur un disque persistant. Texte alternatif facultatif, pas de case « autorisation » par photo (accord verbal avant la prise de vue, puis accord à l'inscription).
+- **Édition sur place** : connecté en administrateur, les textes et les services « Nos initiatives » se modifient directement sur les pages publiques (crayons ✏️). Pour rendre un nouveau texte modifiable : le déclarer dans `src/lib/contenus.js` et l'afficher avec `<BlocEditable>`.
 - **Contraste AA** : jamais de texte en ocre doré sur crème ; l'ocre sert aux aplats et aux détails.

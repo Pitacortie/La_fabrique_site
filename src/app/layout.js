@@ -1,5 +1,6 @@
 import { Antonio, Montserrat } from "next/font/google";
 import BoutonSignalement from "@/components/BoutonSignalement";
+import GardeSession from "@/components/GardeSession";
 import { getMembreConnecte } from "@/lib/auth";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }) {
       <body>
         {children}
         <BoutonSignalement connecte={!!membre} />
+        {membre && <GardeSession />}
       </body>
     </html>
   );

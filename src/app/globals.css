@@ -151,7 +151,7 @@ img { max-width: 100%; height: auto; }
 .nav .lien-connexion { color: var(--vert); }
 .burger { display: none; margin-left: auto; background: none; border: 1px solid var(--bordure); border-radius: 8px; padding: 0.4rem 0.7rem; font: inherit; cursor: pointer; }
 
-@media (max-width: 56rem) {
+@media (max-width: 66rem) {
   .burger { display: block; }
   .nav { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch;
     background: var(--surface); border-bottom: 1px solid var(--bordure); padding: 0.75rem 1.25rem 1.25rem; }
@@ -513,3 +513,35 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 }
 .champ-date-calendrier .rdp-caption_label { font-weight: 600; text-transform: capitalize; }
 .champ-date-calendrier .rdp-weekday { text-transform: capitalize; font-size: 0.8rem; }
+
+/* ---------- Agenda (P10) ---------- */
+.agenda-mois-entete { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0; }
+.agenda-mois-entete h2 { margin: 0; text-transform: capitalize; }
+.agenda-mois-entete a { font-size: 1.4rem; text-decoration: none; padding: 0.2rem 0.6rem; }
+.agenda-calendrier { table-layout: fixed; min-width: 40rem; }
+.agenda-calendrier td { vertical-align: top; height: 5.5rem; padding: 0.35rem; }
+.agenda-numero { display: block; font-size: 0.85rem; color: var(--texte-doux); }
+.agenda-aujourdhui { background: var(--creme); }
+.agenda-aujourdhui .agenda-numero { color: var(--vert); font-weight: 700; }
+.agenda-pastille {
+  display: block; margin-top: 0.25rem; padding: 0.15rem 0.35rem; border-radius: 6px; font-size: 0.78rem; line-height: 1.3;
+  background: var(--bleu); color: #fff; text-decoration: none; overflow-wrap: anywhere;
+}
+.agenda-liste { list-style: none; padding: 0; margin: 1.5rem 0 0; display: grid; gap: 1rem; }
+.agenda-liste h2 { margin: 0.25rem 0; }
+
+/* ---------- Gazette (P11) ---------- */
+.gazette-archives { padding-left: 1.2rem; }
+.gazette-archives li { margin: 0.3rem 0; }
+
+/* ---------- Déconnexion automatique (ACC-4) ---------- */
+.garde-session {
+  position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 200;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; max-width: calc(100vw - 2rem);
+  background: var(--surface); border: 2px solid var(--terracotta); border-radius: var(--rayon);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); padding: 0.9rem 1.2rem;
+}
+.garde-session p { margin: 0; }
+
+.sel-citation { margin: 1.5rem 0 0; padding: 1rem 1.25rem; border-left: 4px solid var(--terracotta); background: var(--surface);
+  font-style: italic; font-weight: 600; border-radius: 0 var(--rayon) var(--rayon) 0; }

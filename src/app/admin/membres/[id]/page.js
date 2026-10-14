@@ -20,14 +20,13 @@ export default async function FicheMembre({ params }) {
       cotisations: { orderBy: { valideJusquau: "desc" }, include: { saisiePar: { select: { prenom: true, nom: true } } } },
       acceptations: { include: { texte: true }, orderBy: { accepteLe: "desc" } },
       inscriptionSel: true,
-      attestationsRc: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   if (!m) notFound();
   // RG-9 : tout accès d'un administrateur à une identité est journalisé
   await journaliser({ acteurId: admin.id, action: "membre.consulte", cibleType: "Membre", cibleId: id });
   const historique = await historiqueMembre(id);
-  const bureau = admin.role === "BUREAU";
+  const bureau = true; // ADM-9 : tous les administrateurs ont les mêmes droits
   const soi = admin.id === m.id;
   const cloture = m.statut === "CLOTURE";
 
@@ -70,7 +69,7 @@ export default async function FicheMembre({ params }) {
           <h2>SEL</h2>
           <p>
             {m.inscriptionSel
-              ? `Inscrit (${m.inscriptionSel.statut === "ACTIVE" ? "actif" : "suspendu"}) · solde 🧱 ${m.alias?.soldeBriques ?? 0} · assurance ${m.attestationsRc[0]?.statut === "VALIDEE" ? `jusqu'au ${formatDate(m.attestationsRc[0].valideJusquau)}` : "non validée"}`
+              ? `Inscrit (${m.inscriptionSel.statut === "ACTIVE" ? "actif" : "suspendu"}) · solde 🧱 ${m.alias?.soldeBriques ?? 0} · assurance ${m.inscriptionSel.assuranceRc ? `${m.inscriptionSel.assuranceRc.compagnie}, contrat ${m.inscriptionSel.assuranceRc.numeroPolice || "à compléter"}` : "non déclarée"}`
               : "Pas inscrit au SEL."}
           </p>
           <h2>Textes acceptés</h2>
@@ -87,7 +86,7 @@ export default async function FicheMembre({ params }) {
         <>
           <section className="carte section-admin">
             <h2>Rôle et catégorie</h2>
-            <FormulaireRole membre={{ id: m.id, categorie: m.categorie, role: m.role, peutPublier: m.peutPublier }} />
+            <FormulaireRole membre={{ id: m.id, categorie: m.categorie, role: m.role }} />
           </section>
           {!soi && (
             <section className="carte section-admin">
@@ -105,7 +104,6 @@ export default async function FicheMembre({ params }) {
         </>
       )}
       {cloture && <div className="encart section-admin">Compte clôturé{m.motifStatut ? ` : ${m.motifStatut}` : ""}.</div>}
-      {!bureau && <p className="refs section-admin">La modification et la suppression des membres sont réservées au Bureau.</p>}
     </>
   );
 }

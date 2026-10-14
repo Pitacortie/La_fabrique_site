@@ -94,7 +94,7 @@ export default async function Demande({ params, searchParams }) {
             {statut.texte} le {d.decideLe ? horodatage.format(d.decideLe) : "—"}
             {d.decidePar && ` par ${d.decidePar.prenom} ${d.decidePar.nom}`}.
           </p>
-          {d.motifRefus && <p>Motif : {d.motifRefus}</p>}
+          {d.motifRefus && <p>Note interne : {d.motifRefus}</p>}
           {d.membre && (
             <p>
               Compte : code <strong>{d.membre.alias?.code}</strong> ·{" "}

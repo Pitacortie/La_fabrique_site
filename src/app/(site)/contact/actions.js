@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { adresseAssociation } from "@/lib/adhesion";
+import { alerter } from "@/lib/alertes";
 import { journaliser } from "@/lib/audit";
 import { getMembreConnecte } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -39,8 +39,8 @@ export async function envoyerMessage(_etat, formData) {
 
   const lien = `${await urlDuSite()}/admin/messages?id=${enregistre.id}`;
   const echec = (e) => console.error("Courriel non envoyé :", e.message);
-  // « Répondre » depuis la boîte de l'association écrit directement à l'expéditeur
-  await envoyerEmail({ a: await adresseAssociation(), repondreA: d.email, ...emailMessageContact({ ...d, sujet: SUJETS_CONTACT[d.sujet], lien }) }).catch(echec);
+  // « Répondre » depuis l'alerte écrit directement à l'expéditeur
+  await alerter("CONTACT", { repondreA: d.email, ...emailMessageContact({ ...d, sujet: SUJETS_CONTACT[d.sujet], lien }) });
   await envoyerEmail({ a: d.email, ...emailAccuseContact({ nom: d.nom }) }).catch(echec);
   return { ok: MERCI };
 }

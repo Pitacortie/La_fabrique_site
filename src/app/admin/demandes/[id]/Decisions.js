@@ -56,7 +56,7 @@ export function FormulaireValidation({ demande, aujourdhui, finAnnee }) {
   );
 }
 
-// ADH-5 : refus avec motif facultatif ; ADH-14 : classement sans suite.
+// ADH-5 : refus non motivé (note interne facultative) ; ADH-14 : classement sans suite.
 export function FormulaireRefus({ id }) {
   const [etat, action] = useActionState(refuserDemande, null);
   const [ouvert, setOuvert] = useState(false);
@@ -74,9 +74,9 @@ export function FormulaireRefus({ id }) {
         <input type="hidden" name="id" value={id} />
         <Retour etat={etat} />
         <div className="champ">
-          <label htmlFor="motif">Motif (facultatif, envoyé au postulant)</label>
+          <label htmlFor="motif">Note interne (facultative)</label>
           <textarea id="motif" name="motif" rows={3} maxLength={1000} />
-          <span className="aide">Les statuts n'imposent pas de motiver un refus. Un e-mail poli est envoyé dans tous les cas.</span>
+          <span className="aide">Le refus n'est pas motivé auprès du postulant : cette note reste dans la console et n'est jamais envoyée. Un e-mail poli le prévient.</span>
         </div>
         <div className="actions">
           <BoutonEnvoi className="bouton bouton-danger" enCours="Envoi…">Refuser et prévenir le postulant</BoutonEnvoi>

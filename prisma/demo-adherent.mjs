@@ -30,7 +30,7 @@ const PERSONNES = [
     nom: "Martin",
     telephone: "06 00 00 00 02",
     adresse: "8 rue du Pont",
-    annonce: { type: "DEMANDE", nature: "SERVICE", rubrique: "informatique", titre: "Aide pour mon smartphone", description: "Je cherche quelqu'un pour m'aider à installer et utiliser une application de visio pour appeler ma famille.", dureeEstimee: 60, modalite: "DISTANCE" },
+    annonce: { type: "DEMANDE", nature: "SERVICE", rubrique: "savoirs", titre: "Aide pour mon smartphone", description: "Je cherche quelqu'un pour m'aider à installer et utiliser une application de visio pour appeler ma famille.", dureeEstimee: 60, modalite: "DISTANCE" },
   },
   {
     email: "sacha@fabrique.local",
@@ -82,7 +82,6 @@ async function supprimer(email) {
   await prisma.$transaction([
     prisma.acceptation.deleteMany({ where: { membreId: m.id } }),
     prisma.cotisation.deleteMany({ where: { membreId: m.id } }),
-    prisma.attestationRc.deleteMany({ where: { membreId: m.id } }),
     prisma.membre.delete({ where: { id: m.id } }),
   ]);
 }
@@ -99,15 +98,14 @@ async function main() {
 
   // Cotisation de démo valable jusqu'à la fin de l'année prochaine (pour que la démo ne s'arrête pas au 1er janvier)
   const finAnnee = new Date(Date.UTC(new Date().getFullYear() + 1, 11, 31));
-  const dansUnAn = new Date(Date.now() + 365 * 86_400_000);
+  const assuranceRc = { numeroPolice: "DEMO-0001", compagnie: "Assurance fictive", adresseCompagnie: "1 place de la Mairie, 24700 Ménesplet", declareeLe: new Date().toISOString() };
   const textes = await prisma.texteJuridique.findMany({ where: { enVigueurLe: { lte: new Date() } }, orderBy: { enVigueurLe: "desc" } });
   const enVigueur = Object.values(Object.fromEntries([...textes].reverse().map((t) => [t.type, t])));
 
   // Le compte Bureau peut aussi entrer dans le SEL (pour tester la modération des deux côtés)
   if (!(await prisma.inscriptionSel.findUnique({ where: { membreId: bureau.id } }))) {
     await prisma.cotisation.create({ data: { membreId: bureau.id, montant: 1, modeReglement: "ESPECES", recueLe: new Date(), valideJusquau: finAnnee, saisieParId: bureau.id } });
-    await prisma.inscriptionSel.create({ data: { membreId: bureau.id } });
-    await prisma.attestationRc.create({ data: { membreId: bureau.id, assureur: "Assurance fictive", valideJusquau: dansUnAn, statut: "VALIDEE", verifieParId: bureau.id, verifieLe: new Date() } });
+    await prisma.inscriptionSel.create({ data: { membreId: bureau.id, assuranceRc } });
     const deja = new Set((await prisma.acceptation.findMany({ where: { membreId: bureau.id } })).map((a) => a.texteId));
     await prisma.acceptation.createMany({ data: enVigueur.filter((t) => !deja.has(t.id)).map((t) => ({ texteId: t.id, membreId: bureau.id })) });
   }
@@ -138,10 +136,7 @@ async function main() {
         dateAgrement: new Date(),
         alias: { create: { code: genererCode() } },
         cotisations: { create: { montant: 5, modeReglement: "ESPECES", recueLe: new Date(), valideJusquau: finAnnee, saisieParId: bureau.id } },
-        ...(p.sel === false ? {} : { inscriptionSel: { create: {} } }),
-        attestationsRc: p.sel === false ? undefined : {
-          create: { assureur: "Assurance fictive", valideJusquau: dansUnAn, statut: "VALIDEE", verifieParId: bureau.id, verifieLe: new Date() },
-        },
+        ...(p.sel === false ? {} : { inscriptionSel: { create: { assuranceRc } } }),
       },
       include: { alias: true },
     });
@@ -152,7 +147,7 @@ async function main() {
     const rubrique = p.annonce && (await prisma.rubriqueSel.findUnique({ where: { code: p.annonce.rubrique } }));
     if (rubrique) {
       const { rubrique: _, ...annonce } = p.annonce;
-      await prisma.annonce.create({ data: { ...annonce, rubriqueId: rubrique.id, zone: "Ménesplet", auteurId: membre.alias.id } });
+      await prisma.annonce.create({ data: { ...annonce, rubriqueId: rubrique.id, auteurId: membre.alias.id } });
     }
     console.log(`  ${p.prenom.padEnd(10)} ${p.email.padEnd(36)} mot de passe ${motDePasse}   code ${membre.alias.code}`);
   }

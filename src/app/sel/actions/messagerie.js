@@ -6,6 +6,7 @@ import { journaliser } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { limiter } from "@/lib/rate-limit";
 import { exigerAccesSel } from "@/lib/sel/acces";
+import { RAISONS_LEVEE } from "@/lib/sel/regles";
 import { conversationDe } from "@/lib/sel/conversations";
 import { filtreAnnoncesVisibles, filtreAuteurEnRegle } from "@/lib/sel/donnees";
 import { notifierEtape, notifierMessage } from "@/lib/sel/notifications";
@@ -70,23 +71,28 @@ export async function envoyerMessage(_etat, formData) {
 }
 
 // Section 6.5 : chacun clique pour révéler son identité ; elle n'est montrée que lorsque les deux ont accepté.
+// Refuser n'a pas à être justifié : l'échange se poursuit alors à distance.
 export async function revelerIdentite(_etat, formData) {
   const id = String(formData.get("conversationId") ?? "");
-  const { alias } = await exigerAccesSel(`/sel/messages/${id}`);
+  const { alias, membre } = await exigerAccesSel(`/sel/messages/${id}`);
   const conversation = await conversationDe(id, alias.id);
   if (!conversation) return { erreur: "Conversation introuvable." };
   if (formData.get("confirmation") !== "on") return { erreur: "Cochez la case pour confirmer." };
+  const raison = RAISONS_LEVEE[String(formData.get("raison") ?? "")];
+  if (!raison) return { erreur: "Indiquez pourquoi vous révélez votre identité." };
 
   const champ = conversation.auteurId === alias.id ? "accordAuteurLe" : "accordInterlocuteurLe";
   if (conversation[champ]) return { ok: "Votre accord est déjà enregistré." };
   const maj = await prisma.conversation.update({ where: { id }, data: { [champ]: new Date() } });
   const complet = maj.accordAuteurLe && maj.accordInterlocuteurLe;
-  // 6.7 : chaque levée d'anonymat est journalisée (qui, quand, champs révélés)
+  // 6.7 : chaque levée d'anonymat est journalisée (qui, quand, pourquoi) ; seuls les administrateurs lisent le journal
   await journaliser({
+    acteurId: membre.id,
     action: complet ? "sel.anonymat_leve" : "sel.anonymat_accord",
     cibleType: "Conversation",
     cibleId: id,
-    details: complet ? { champs: "prénom, nom, téléphone, commune" } : { alias: alias.code },
+    motif: raison,
+    details: { alias: alias.code, ...(complet ? { champs: "prénom, nom, adresse" } : {}) },
   });
   const autreId = conversation.auteurId === alias.id ? conversation.interlocuteurId : conversation.auteurId;
   if (!complet) await notifierEtape({ conversationId: id, destinataireId: autreId });

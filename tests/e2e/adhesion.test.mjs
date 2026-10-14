@@ -75,6 +75,7 @@ describe("dépôt d'une demande d'adhésion (ADH-1 à ADH-4, ADH-15)", () => {
     [{ montant: "0.5" }, "La cotisation est d'un euro minimum."],
     [{ modeReglement: "CARTE_BANCAIRE" }, "Choisissez un mode de règlement."],
     [{ dateNaissance: "2200-01-01" }, "Date de naissance invalide."],
+    [{ dateNaissance: `${new Date().getFullYear() - 10}-01-01` }, "L'adhésion est possible à partir de 13 ans."],
   ])("refuse %j", async (champs, message) => {
     expect((await deposer(champs)).message).toBe(message);
   });
@@ -132,10 +133,10 @@ describe("validation par le Bureau, activation (ADH-5 à ADH-7, ADH-13, ADM-1)",
     expect(await prisma.journalAudit.findFirst({ where: { action: "demande.consultee", cibleId: idDemande } })).toBeTruthy();
   });
 
-  it("un administrateur hors Bureau ne peut pas valider, même en rejouant la requête", async () => {
+  it("un adhérent ne peut pas valider, même en rejouant la requête", async () => {
     const donnees = await bureau.formulaire(`/admin/demandes/${idDemande}`, VALIDER);
-    const r = await (await connecte("admin")).envoyer(`/admin/demandes/${idDemande}`, donnees);
-    expect(r.location).toBe("/admin?refus=bureau");
+    const r = await (await connecte("adherent")).envoyer(`/admin/demandes/${idDemande}`, donnees);
+    expect(r.location).toBe("/espace");
     expect((await prisma.demandeAdhesion.findUnique({ where: { id: idDemande } })).statut).toBe("EN_ATTENTE");
   });
 
@@ -199,7 +200,7 @@ describe("refus, classement, lien d'activation renvoyé", () => {
     return { valeurs, id: (await prisma.demandeAdhesion.findFirst({ where: { email: valeurs.email } })).id };
   };
 
-  it("un refus avec motif prévient le postulant et ne crée aucun compte (ADH-5, RG-6)", async () => {
+  it("un refus prévient le postulant sans motif, et ne crée aucun compte (ADH-5, RG-6)", async () => {
     const { valeurs, id } = await nouvelleDemande();
     const r = await bureau.soumettre(`/admin/demandes/${id}`, 'name="motif"', { motif: "Cotisation jamais reçue après relance." });
     expect(r.location).toBe(`/admin/demandes/${id}`);
@@ -210,7 +211,8 @@ describe("refus, classement, lien d'activation renvoyé", () => {
     await pause(200);
     const c = dernierCourriel(valeurs.email);
     expect(c.objet).toBe("Votre demande d'adhésion");
-    expect(c.texte).toContain("Motif : Cotisation jamais reçue après relance.");
+    // La note interne n'est jamais envoyée
+    expect(c.texte).not.toContain("Cotisation jamais reçue");
     expect(await prisma.journalAudit.findFirst({ where: { action: "demande.refusee", cibleId: id } })).toBeTruthy();
   });
 

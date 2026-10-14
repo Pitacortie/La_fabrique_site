@@ -38,11 +38,11 @@ describe("gestion des membres (console)", () => {
     expect((await nav.page("/admin/membres")).status).not.toBe(200);
   });
 
-  it("la consultation d'une fiche est journalisée ; un administrateur non Bureau ne peut pas supprimer", async () => {
+  it("la consultation d'une fiche est journalisée ; tout administrateur peut supprimer (ADM-9)", async () => {
     const nav = await new Navigateur().connexion(COMPTES.admin);
     const m = await nouveauMembre();
     const { html } = await nav.page(fiche(m));
-    expect(html).not.toContain('name="confirmation"');
+    expect(html).toContain('name="confirmation"');
     expect(await prisma.journalAudit.count({ where: { action: "membre.consulte", cibleId: m.id } })).toBe(1);
   });
 

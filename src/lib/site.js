@@ -9,6 +9,8 @@ export const navigation = [
   { href: "/", label: "Accueil" },
   { href: "/presentation", label: "Présentation" },
   { href: "/actualites", label: "Actualités" },
+  { href: "/agenda", label: "Agenda" },
+  { href: "/gazette", label: "La gazette" },
   { href: "/sel", label: "Le SEL" },
   { href: "/contact", label: "Contacts" },
 ];
@@ -57,7 +59,7 @@ export const libellesStatutDemande = {
 // Objets proposés dans le formulaire Contacts
 export const SUJETS_CONTACT = {
   question: "Une question",
-  projet: "Vos attentes, vos projets",
+  projet: "Boîte à idées",
   adhesion: "Mon adhésion",
   image: "Retrait d'une photo (droit à l'image)",
   donnees: "Mes données personnelles",

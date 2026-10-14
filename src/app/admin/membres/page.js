@@ -80,7 +80,7 @@ export default async function Membres({ searchParams }) {
                   <td><Link href={`/admin/membres/${m.id}`}>{m.nom} {m.prenom}</Link><br /><span className="meta">{m.email}</span></td>
                   <td>{m.alias?.code}</td>
                   <td>{libellesCategorie[m.categorie]}</td>
-                  <td>{ROLES[m.role]}{m.peutPublier && m.role !== "BUREAU" ? " · publie" : ""}</td>
+                  <td>{ROLES[m.role]}</td>
                   <td>{c ? <span className={c.valideJusquau >= jour ? "" : "sel-moins"}>{formatDate(c.valideJusquau)}</span> : "—"}</td>
                   <td>{m.inscriptionSel ? (m.inscriptionSel.statut === "ACTIVE" ? `🧱 ${m.alias?.soldeBriques ?? 0}` : "suspendu") : "—"}</td>
                   <td><span className={`badge ${STATUTS[m.statut].classe}`}>{STATUTS[m.statut].texte}</span></td>

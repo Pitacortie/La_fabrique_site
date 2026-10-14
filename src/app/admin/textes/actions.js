@@ -19,11 +19,9 @@ const schema = z.object({
   contenu: z.string().trim().min(20, "Collez le texte complet (20 caractères minimum).").max(100000),
 });
 
-// Statuts, règlement et chartes : modification sensible réservée au Bureau (statuts, art. 19 ; ADM-17).
+// Statuts, règlement et chartes : tous les administrateurs (ADM-9, ADM-11)
 async function exigerBureau() {
-  const admin = await exigerAdmin();
-  if (admin.role !== "BUREAU") return { admin, refus: "Seul un membre du Bureau peut modifier les textes officiels." };
-  return { admin };
+  return { admin: await exigerAdmin() };
 }
 
 function lire(formData) {

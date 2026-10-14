@@ -2,16 +2,17 @@ import Link from "next/link";
 import { exigerAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatCreneau } from "@/lib/heure-paris";
-import { ALERTE_BRIQUES, duree } from "@/lib/sel/regles";
+import { ALERTE_BRIQUES, SEUIL_BAS, duree } from "@/lib/sel/regles";
+import { soldeSolidarite } from "@/lib/sel/solidarite";
 import { DecisionLitige } from "./Formulaires";
 
 export const metadata = { title: "SEL" };
 
-// Tableau de bord du SEL : à vérifier, à modérer, litiges, soldes à surveiller (ADM-6, ADM-7, ADM-14)
+// Tableau de bord du SEL : à modérer, litiges, soldes à surveiller, compte de solidarité (ADM-6, ADM-7, ADM-14)
 export default async function TableauSel() {
   await exigerAdmin();
-  const [attestations, signalements, inscrits, annonces, litiges, soldesHauts, soldesBas] = await Promise.all([
-    prisma.attestationRc.count({ where: { statut: "EN_ATTENTE" } }),
+  const [solidarite, signalements, inscrits, annonces, litiges, soldesHauts, soldesBas] = await Promise.all([
+    soldeSolidarite(),
     prisma.signalementSel.count({ where: { statut: "NOUVEAU" } }),
     prisma.inscriptionSel.count({ where: { statut: "ACTIVE" } }),
     prisma.annonce.count({ where: { statut: "PUBLIEE" } }),
@@ -21,7 +22,7 @@ export default async function TableauSel() {
       orderBy: { updatedAt: "asc" },
     }),
     prisma.alias.findMany({ where: { soldeBriques: { gt: ALERTE_BRIQUES } }, select: { code: true, soldeBriques: true }, orderBy: { soldeBriques: "desc" } }),
-    prisma.alias.findMany({ where: { soldeBriques: { lt: -100 } }, select: { code: true, soldeBriques: true, plancherBriques: true }, orderBy: { soldeBriques: "asc" } }),
+    prisma.alias.findMany({ where: { soldeBriques: { lte: SEUIL_BAS } }, select: { code: true, soldeBriques: true }, orderBy: { soldeBriques: "asc" } }),
   ]);
 
   return (
@@ -31,8 +32,8 @@ export default async function TableauSel() {
         <Link href="/sel">Ouvrir le SEL →</Link>
       </div>
       <div className="stats">
-        <Link href="/admin/sel/inscriptions" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="valeur">{attestations}</div><div className="libelle">Attestations d'assurance à vérifier</div>
+        <Link href="/admin/sel/solidarite" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="valeur">🧱 {solidarite}</div><div className="libelle">Compte d'urgence et de solidarité</div>
         </Link>
         <Link href="/admin/sel/signalements" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="valeur">{signalements}</div><div className="libelle">Signalements à traiter</div>
@@ -64,13 +65,13 @@ export default async function TableauSel() {
 
       <section className="section-admin">
         <h2>Soldes à surveiller</h2>
-        <p className="meta">Au-delà de {ALERTE_BRIQUES} briques : concertation du CA, sans sanction. Sous -100 : proche du minimum de -120.</p>
+        <p className="meta">À {SEUIL_BAS} briques ou au-delà de {ALERTE_BRIQUES} : le CA prend contact avec la personne, sans sanction ni blocage.</p>
         {soldesHauts.length + soldesBas.length === 0 ? (
           <p>Aucun solde à surveiller.</p>
         ) : (
           <ul>
             {soldesHauts.map((a) => <li key={a.code}>{a.code} : <strong>+{a.soldeBriques}</strong> briques</li>)}
-            {soldesBas.map((a) => <li key={a.code}>{a.code} : <strong>{a.soldeBriques}</strong> briques{a.plancherBriques != null && ` (dérogation : ${a.plancherBriques})`}</li>)}
+            {soldesBas.map((a) => <li key={a.code}>{a.code} : <strong>{a.soldeBriques}</strong> briques</li>)}
           </ul>
         )}
       </section>

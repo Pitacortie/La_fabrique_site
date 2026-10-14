@@ -7,7 +7,7 @@ export const metadata = { title: "Mon espace", robots: { index: false, follow: f
 
 const items = [
   { href: "/espace", label: "Mon profil" },
-  { href: "/espace/fabrications", label: "Nos « Fabrications »" },
+  { href: "/espace/initiatives", label: "Nos initiatives" },
   { href: "/sel", label: "Le SEL →" },
   { href: "/espace/textes", label: "Mes textes acceptés" },
   { groupe: "Mon compte" },

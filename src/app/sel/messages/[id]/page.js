@@ -6,8 +6,8 @@ import BoutonEnvoi from "@/components/BoutonEnvoi";
 import { prisma } from "@/lib/db";
 import { formatHorodatage } from "@/lib/heure-paris";
 import { exigerAccesSel } from "@/lib/sel/acces";
-import { conversationDe } from "@/lib/sel/conversations";
-import { anonymatLeve, libellesType, roles } from "@/lib/sel/regles";
+import { conversationDe, mineurConcerne } from "@/lib/sel/conversations";
+import { RAISONS_LEVEE, anonymatLeve, libellesType, roles } from "@/lib/sel/regles";
 import Echange from "./Echange";
 import { DefilerEnBas, FormulaireMessage, Rafraichir } from "./Fil";
 
@@ -37,7 +37,7 @@ export default async function Conversation({ params }) {
   const monAccord = suisAuteur ? conversation.accordAuteurLe : conversation.accordInterlocuteurLe;
   const sonAccord = suisAuteur ? conversation.accordInterlocuteurLe : conversation.accordAuteurLe;
   const identite = leve
-    ? await prisma.alias.findUnique({ where: { id: autreId }, select: { membre: { select: { prenom: true, nom: true, telephone: true, commune: true } } } })
+    ? await prisma.alias.findUnique({ where: { id: autreId }, select: { membre: { select: { prenom: true, nom: true, adresse: true, codePostal: true, commune: true } } } })
     : null;
 
   const actif = echanges.findLast((e) => ["PROPOSE", "CONFIRME", "DECLARE"].includes(e.statut));
@@ -91,8 +91,7 @@ export default async function Conversation({ params }) {
             {leve ? (
               <dl className="liste-def">
                 <dt>Nom</dt><dd>{identite.membre.prenom} {identite.membre.nom}</dd>
-                <dt>Téléphone</dt><dd>{identite.membre.telephone ?? "—"}</dd>
-                <dt>Commune</dt><dd>{identite.membre.commune ?? "—"}</dd>
+                <dt>Adresse</dt><dd>{identite.membre.adresse ? `${identite.membre.adresse}, ${identite.membre.codePostal ?? ""} ${identite.membre.commune ?? ""}` : "—"}</dd>
               </dl>
             ) : monAccord ? (
               <p className="meta">Vous avez accepté de révéler votre identité. Elle sera visible, comme celle de {autre.code}, quand {autre.code} aura accepté aussi.</p>
@@ -101,8 +100,15 @@ export default async function Conversation({ params }) {
                 <input type="hidden" name="conversationId" value={id} />
                 <p className="meta">
                   {sonAccord ? `${autre.code} a accepté de révéler son identité. ` : ""}
-                  Pour vous rencontrer, échangez vos identités : prénom, nom, téléphone et commune. C'est définitif.
+                  Pour vous rencontrer, échangez vos identités : prénom, nom et adresse. C'est obligatoire avant un échange en
+                  personne ou si un mineur est concerné, et c'est définitif. Vous pouvez aussi refuser, sans avoir à vous
+                  justifier : l'échange se poursuit alors à distance.
                 </p>
+                <label htmlFor="raison" className="sr-only">Pourquoi révéler votre identité</label>
+                <select id="raison" name="raison" required defaultValue="">
+                  <option value="" disabled>Pourquoi ?</option>
+                  {Object.entries(RAISONS_LEVEE).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
                 <label className="case">
                   <input type="checkbox" name="confirmation" required />
                   <span>J'accepte de révéler mon identité à {autre.code}.</span>
@@ -118,7 +124,7 @@ export default async function Conversation({ params }) {
               echange={actif}
               suis={suis}
               autreCode={autre.code}
-              peutProposer={conversation.annonce.modalite !== "PRESENTIEL" || leve}
+              peutProposer={leve || (conversation.annonce.modalite !== "PRESENTIEL" && !(await mineurConcerne(conversation)))}
               alias={alias}
               demain={demain}
             />

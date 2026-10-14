@@ -17,14 +17,14 @@ export default function CarteAnnonce({ annonce: a, mienne }) {
     <article className={`carte carte-${COULEURS_NATURE[a.nature]} sel-carte`}>
       <p className="meta">
         <span className="badge badge-neutre">{a.rubrique.libelle}</span> <span className="badge">{libellesNature[a.nature]}</span>
-        {mienne && <> <span className="badge badge-ocre">Votre annonce</span></>}
+        {mienne && <> <span className="badge badge-ocre">{a.statut === "BROUILLON" ? "Brouillon" : "Votre annonce"}</span></>}
       </p>
       <h2 className="sel-carte-titre">
         <Link href={`/sel/annonces/${a.id}`}>{a.titre}</Link>
       </h2>
       <p className="sel-carte-extrait">{a.description.length > 160 ? `${a.description.slice(0, 160)}…` : a.description}</p>
       <p className="meta">
-        📍 {a.zone} · {libellesModalite[a.modalite]}
+        {libellesModalite[a.modalite]}
         {valeur && <> · {valeur}</>}
       </p>
       <p className="meta sel-carte-auteur">

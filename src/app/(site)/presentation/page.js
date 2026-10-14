@@ -5,7 +5,7 @@ import { getContenus } from "@/lib/contenus";
 export const metadata = { title: "Présentation" };
 
 export default async function Presentation() {
-  const textes = await getContenus(["presentation.qui", "presentation.neutralite"]);
+  const textes = await getContenus(["presentation.qui", "presentation.generations", "presentation.rejoindre", "presentation.neutralite", "presentation.consultations"]);
   return (
     <div className="conteneur section">
       <h1>Présentation</h1>
@@ -24,6 +24,27 @@ export default async function Presentation() {
           <div className="carte carte-vert"><h3>Solidarité</h3><p>Mener des actions de solidarité, d'entraide et d'accès aux droits.</p></div>
           <div className="carte carte-ocre"><h3>Générations</h3><p>Créer des liens intergénérationnels et encourager la participation.</p></div>
         </div>
+      </section>
+
+      <section className="section">
+        <h2>Une association ouverte à toutes les générations</h2>
+        <BlocEditable cle="presentation.generations" texte={textes["presentation.generations"]} />
+      </section>
+
+      <section>
+        <h2>Rejoindre La Fabrique</h2>
+        <div className="encart">
+          <BlocEditable cle="presentation.rejoindre" texte={textes["presentation.rejoindre"]} />
+          <div className="actions">
+            <Link href="/adherer" className="bouton">Adhérer</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* PRE-7 : les consultations citoyennes sont décrites ici (pas de questionnaire en ligne sur le site) */}
+      <section className="section">
+        <h2>Les consultations citoyennes</h2>
+        <BlocEditable cle="presentation.consultations" texte={textes["presentation.consultations"]} />
       </section>
 
       <section>

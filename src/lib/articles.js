@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 
-// Articles visibles par le public : publiés uniquement, avec leurs photos autorisées (ACT-8).
+// Articles visibles par le public : publiés uniquement, avec leurs photos.
 const inclureMedias = {
-  medias: { where: { autorisationPublication: true }, orderBy: { ordre: "asc" } },
+  medias: { orderBy: { ordre: "asc" } },
 };
 
 export function getArticlesPublies({ take, categorie } = {}) {

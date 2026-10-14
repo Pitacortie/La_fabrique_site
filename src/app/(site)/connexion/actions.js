@@ -22,7 +22,7 @@ const hachageFactice = hash("mot-de-passe-factice");
 
 // N'accepte qu'un chemin interne comme destination après connexion (pas de redirection ouverte).
 function destinationSure(suite) {
-  return suite && suite.startsWith("/") && !suite.startsWith("//") ? suite : "/espace/fabrications";
+  return suite && suite.startsWith("/") && !suite.startsWith("//") ? suite : "/espace/initiatives";
 }
 
 export async function seConnecter(_etat, formData) {
@@ -60,7 +60,7 @@ export async function seConnecter(_etat, formData) {
   reinitialiser(cleIp);
   reinitialiser(cleCompte);
   await prisma.membre.update({ where: { id: membre.id }, data: { derniereConnexion: new Date() } });
-  await creerSession(membre.id, { resterConnecte: formData.get("resterConnecte") === "on" });
+  await creerSession(membre.id);
   redirect(destinationSure(suite));
 }
 

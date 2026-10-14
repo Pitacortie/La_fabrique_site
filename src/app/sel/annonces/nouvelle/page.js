@@ -14,7 +14,7 @@ export default async function NouvelleAnnonce() {
         Votre annonce est publiée sous votre code <strong>{membre.alias?.code}</strong> : personne ne sait qui vous êtes
         tant que vous ne l'avez pas décidé.
       </p>
-      <FormulaireAnnonce rubriques={rubriques} zoneParDefaut={membre.commune ?? ""} />
+      <FormulaireAnnonce rubriques={rubriques} />
     </>
   );
 }

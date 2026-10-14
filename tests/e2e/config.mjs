@@ -16,8 +16,8 @@ export const DATABASE_URL_TEST =
 export const TACHES_SECRET_TEST = "secret-des-taches-pour-les-tests";
 
 export const COMPTES = {
-  bureau: { email: "bureau@test.local", motDePasse: "Bureau-test-2026!", role: "BUREAU", peutPublier: true },
-  admin: { email: "admin@test.local", motDePasse: "Admin-test-2026!", role: "ADMINISTRATEUR", peutPublier: false },
+  bureau: { email: "bureau@test.local", motDePasse: "Bureau-test-2026!", role: "BUREAU" },
+  admin: { email: "admin@test.local", motDePasse: "Admin-test-2026!", role: "ADMINISTRATEUR" },
   adherent: { email: "adherent@test.local", motDePasse: "Adherent-test-2026!", role: "ADHERENT" },
   suspendu: { email: "suspendu@test.local", motDePasse: "Suspendu-test-2026!", role: "ADHERENT", statut: "SUSPENDU" },
   motdepasse: { email: "motdepasse@test.local", motDePasse: "Motdepasse-test-2026!", role: "ADHERENT" },
@@ -25,12 +25,12 @@ export const COMPTES = {
   coordonnees: { email: "coordonnees@test.local", motDePasse: "Coordonnees-test-2026!", role: "ADHERENT" },
   changementEmail: { email: "changement@test.local", motDePasse: "Changement-test-2026!", role: "ADHERENT" },
   reconsentement: { email: "reconsentement@test.local", motDePasse: "Reconsentement-test-2026!", role: "ADHERENT" },
-  // SEL : « sel » = cotisation à jour, inscrit au SEL, attestation d'assurance validée
+  // SEL : « sel » = cotisation à jour, inscrit au SEL, assurance responsabilité civile déclarée
   selUn: { email: "sel-un@test.local", motDePasse: "Sel-un-test-2026!", role: "ADHERENT", sel: true },
   selDeux: { email: "sel-deux@test.local", motDePasse: "Sel-deux-test-2026!", role: "ADHERENT", sel: true },
   selTrois: { email: "sel-trois@test.local", motDePasse: "Sel-trois-test-2026!", role: "ADHERENT", sel: true },
   selPauvre: { email: "sel-pauvre@test.local", motDePasse: "Sel-pauvre-test-2026!", role: "ADHERENT", sel: true },
-  selExpire: { email: "sel-expire@test.local", motDePasse: "Sel-expire-test-2026!", role: "ADHERENT", sel: "assurance-expiree" },
+  selExpire: { email: "sel-expire@test.local", motDePasse: "Sel-expire-test-2026!", role: "ADHERENT", sel: "sans-assurance" },
   selNouveau: { email: "sel-nouveau@test.local", motDePasse: "Sel-nouveau-test-2026!", role: "ADHERENT", cotisation: true },
   selRefuse: { email: "sel-refuse@test.local", motDePasse: "Sel-refuse-test-2026!", role: "ADHERENT", cotisation: true },
 };

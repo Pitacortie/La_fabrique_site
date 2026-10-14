@@ -20,7 +20,7 @@ export default function Galerie({ medias }) {
         {medias.map((media, i) => (
           <button key={media.id} type="button" className="galerie-vignette" onClick={() => ouvrir(i)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={media.url} alt={media.texteAlternatif} loading="lazy" />
+            <img src={media.url} alt={media.texteAlternatif ?? ""} loading="lazy" />
           </button>
         ))}
       </div>
@@ -38,7 +38,7 @@ export default function Galerie({ medias }) {
         {m && (
           <figure>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={m.url} alt={m.texteAlternatif} />
+            <img src={m.url} alt={m.texteAlternatif ?? ""} />
             {(m.legende || m.credit) && (
               <figcaption>
                 {m.legende}

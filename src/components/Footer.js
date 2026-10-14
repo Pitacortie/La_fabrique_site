@@ -27,7 +27,9 @@ export default async function Footer() {
             <ul>
               <li><Link href="/presentation">Présentation</Link></li>
               <li><Link href="/documents">Statuts, règlement et charte</Link></li>
-              <li><Link href="/actualites">Actualités et galerie</Link></li>
+              <li><Link href="/actualites">Actualités</Link></li>
+              <li><Link href="/agenda">Agenda</Link></li>
+              <li><Link href="/gazette">La gazette de la Fabrique</Link></li>
               <li><Link href="/le-sel">Le SEL : échanges entre adhérents</Link></li>
               <li><Link href="/adherer">Adhérer</Link></li>
               <li><Link href="/contact">Contacts</Link></li>

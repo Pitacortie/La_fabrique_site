@@ -5,23 +5,29 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { journaliser } from "@/lib/audit";
 import { prisma } from "@/lib/db";
-import { urlDuSite } from "@/lib/email";
-import { enregistrerFichierPrive, supprimerFichierPrive } from "@/lib/fichiers-prives";
+import { envoyerEmail, urlDuSite } from "@/lib/email";
 import { limiter } from "@/lib/rate-limit";
 import { exigerAdherentAJour } from "@/lib/sel/acces";
-import { emailNouvelleInscription } from "@/lib/sel/modeles-email";
-import { notifierBureau } from "@/lib/sel/notifications";
+import { emailInscriptionValidee } from "@/lib/sel/modeles-email";
 import { TEXTES_SEL } from "@/lib/sel/regles";
 import { getTextesEnVigueur } from "@/lib/textes";
 
+const texte = (m) => z.string({ required_error: m }).trim();
+
+// SEL-2, SEL-21 : assurance responsabilité civile déclarative. Aucun fichier, aucune vérification par l'association.
 const schemaRc = z.object({
-  assureur: z.string({ required_error: "Indiquez votre assureur." }).trim().min(2, "Indiquez votre assureur.").max(100),
-  valideJusquau: z
-    .string({ required_error: "Indiquez la date de fin de validité." })
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Indiquez la date de fin de validité.")
-    .refine((v) => new Date(`${v}T23:59:59`) >= new Date(), "Cette attestation n'est plus valable : la date de fin est passée."),
-  certifie: z.literal("on", { errorMap: () => ({ message: "Certifiez que l'attestation est à votre nom et en cours de validité." }) }),
+  possedeRc: z.literal("on", { errorMap: () => ({ message: "Cochez la case : une assurance responsabilité civile en cours de validité est obligatoire pour échanger." }) }),
+  numeroPolice: texte("Indiquez le numéro de votre contrat (police).").min(3, "Indiquez le numéro de votre contrat (police).").max(60),
+  compagnie: texte("Indiquez le nom de la compagnie d'assurance.").min(2, "Indiquez le nom de la compagnie d'assurance.").max(100),
+  adresseCompagnie: texte("Indiquez l'adresse de la compagnie d'assurance.").min(5, "Indiquez l'adresse de la compagnie d'assurance.").max(200),
 });
+
+function lireAssurance(formData) {
+  const lu = schemaRc.safeParse(Object.fromEntries([...formData.entries()].filter(([, v]) => typeof v === "string" && v.trim() !== "")));
+  if (!lu.success) return { erreur: lu.error.issues[0].message };
+  const { numeroPolice, compagnie, adresseCompagnie } = lu.data;
+  return { assuranceRc: { numeroPolice, compagnie, adresseCompagnie, declareeLe: new Date().toISOString() } };
+}
 
 // SEL-2 : acceptation de la Charte et du Règlement du SEL, par deux cases distinctes, avec la version du texte
 async function verifierTextes(formData) {
@@ -36,64 +42,47 @@ async function verifierTextes(formData) {
   return { textes: Object.values(textes) };
 }
 
-async function enregistrerAttestation(formData, membreId) {
-  const lu = schemaRc.safeParse(Object.fromEntries([...formData.entries()].filter(([, v]) => typeof v === "string" && v !== "")));
-  if (!lu.success) return { erreur: lu.error.issues[0].message };
-  const fichier = formData.get("fichier");
-  if (!(fichier instanceof File) || fichier.size === 0) return { erreur: "Joignez votre attestation (PDF, JPEG ou PNG)." };
-  try {
-    const { chemin, type } = await enregistrerFichierPrive(fichier, "attestations");
-    return { donnees: { membreId, assureur: lu.data.assureur, valideJusquau: new Date(`${lu.data.valideJusquau}T00:00:00Z`), fichier: chemin, fichierType: type } };
-  } catch (e) {
-    return { erreur: e.message };
-  }
-}
-
-async function prevenirBureau() {
-  await notifierBureau(emailNouvelleInscription({ lien: `${await urlDuSite()}/admin/sel/inscriptions` }));
-}
-
 export async function inscrireSel(_etat, formData) {
   const etat = await exigerAdherentAJour();
   if (etat.code !== "inscription") redirect("/sel/inscription");
-  if (!limiter(`inscription-sel:${etat.membre.id}`, { max: 5, fenetreMs: 60 * 60 * 1000 }).autorise) {
+  if (!limiter(`inscription-sel:${etat.membre.id}`, { max: 20, fenetreMs: 60 * 60 * 1000 }).autorise) {
     return { erreur: "Trop de tentatives. Réessayez dans une heure." };
   }
   const t = await verifierTextes(formData);
   if (t.erreur) return t;
-  const a = await enregistrerAttestation(formData, etat.membre.id);
+  const a = lireAssurance(formData);
   if (a.erreur) return a;
 
   try {
     await prisma.$transaction([
-      prisma.inscriptionSel.create({ data: { membreId: etat.membre.id } }),
+      prisma.inscriptionSel.create({ data: { membreId: etat.membre.id, assuranceRc: a.assuranceRc } }),
       prisma.acceptation.createMany({ data: t.textes.map((texte) => ({ texteId: texte.id, membreId: etat.membre.id })) }),
-      prisma.attestationRc.create({ data: a.donnees }),
     ]);
-  } catch (e) {
-    await supprimerFichierPrive(a.donnees.fichier);
+  } catch {
     return { erreur: "L'inscription n'a pas pu être enregistrée. Réessayez." };
   }
   await journaliser({ acteurId: etat.membre.id, action: "sel.inscription", cibleType: "Membre", cibleId: etat.membre.id });
-  await prevenirBureau();
+  await envoyerEmail({ a: etat.membre.email, ...emailInscriptionValidee({ prenom: etat.membre.prenom, lien: `${await urlDuSite()}/sel` }) }).catch((e) =>
+    console.error("Courriel du SEL non envoyé :", e.message),
+  );
   revalidatePath("/sel", "layout");
-  redirect("/sel/inscription");
+  redirect("/sel?bienvenue=1");
 }
 
-// Nouvelle attestation : première refusée, ou attestation arrivée à expiration
-export async function deposerAttestation(_etat, formData) {
-  const etat = await exigerAdherentAJour();
-  if (!["attestation", "attestation_expiree"].includes(etat.code)) redirect("/sel/inscription");
-  if (!limiter(`attestation-sel:${etat.membre.id}`, { max: 5, fenetreMs: 60 * 60 * 1000 }).autorise) {
+// Déclaration ou mise à jour de l'assurance (changement de contrat, ou inscription antérieure sans déclaration)
+export async function declarerAssurance(_etat, formData) {
+  const etat = await exigerAdherentAJour("/sel/assurance");
+  if (!["assurance", "ok"].includes(etat.code)) redirect("/sel/inscription");
+  if (!limiter(`assurance-sel:${etat.membre.id}`, { max: 10, fenetreMs: 60 * 60 * 1000 }).autorise) {
     return { erreur: "Trop de tentatives. Réessayez dans une heure." };
   }
-  const a = await enregistrerAttestation(formData, etat.membre.id);
+  const a = lireAssurance(formData);
   if (a.erreur) return a;
-  await prisma.attestationRc.create({ data: a.donnees });
-  await journaliser({ acteurId: etat.membre.id, action: "sel.attestation_deposee", cibleType: "Membre", cibleId: etat.membre.id });
-  await prevenirBureau();
+  await prisma.inscriptionSel.update({ where: { membreId: etat.membre.id }, data: { assuranceRc: a.assuranceRc } });
+  await journaliser({ acteurId: etat.membre.id, action: "sel.assurance_declaree", cibleType: "Membre", cibleId: etat.membre.id });
   revalidatePath("/sel", "layout");
-  redirect("/sel/inscription");
+  if (etat.code === "assurance") redirect("/sel");
+  return { ok: "Votre assurance est enregistrée." };
 }
 
 // Nouvelle version de la Charte ou du Règlement du SEL : acceptation redemandée (section 6.7)

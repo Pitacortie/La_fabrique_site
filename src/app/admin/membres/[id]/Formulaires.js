@@ -23,15 +23,12 @@ export function FormulaireRole({ membre }) {
           <label htmlFor="role">Rôle sur le site</label>
           <select id="role" name="role" defaultValue={membre.role}>
             <option value="ADHERENT">Adhérent</option>
-            <option value="ADMINISTRATEUR">Administrateur (console)</option>
-            <option value="BUREAU">Membre du Bureau (console + adhésions, cotisations, textes)</option>
+            <option value="ADMINISTRATEUR">Administrateur</option>
+            <option value="BUREAU">Administrateur, membre du Bureau</option>
           </select>
         </div>
       </div>
-      <label className="case">
-        <input type="checkbox" name="peutPublier" defaultChecked={membre.peutPublier} />
-        <span>Mandaté pour publier des actualités au nom de l'association (toujours vrai pour le Bureau)</span>
-      </label>
+      <p className="meta">Tous les administrateurs ont les mêmes droits : console, adhésions, cotisations, textes, publication au nom de l'association.</p>
       <div className="actions">
         <BoutonEnvoi className="bouton bouton-secondaire">Enregistrer</BoutonEnvoi>
       </div>

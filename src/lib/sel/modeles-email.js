@@ -29,36 +29,33 @@ export const emailEtapeEchange = ({ prenom, lien }) =>
     bouton: { texte: "Voir l'échange", lien },
   });
 
-export const emailNouvelleInscription = ({ lien }) =>
+export const emailAlerteSolde = ({ code, solde, lien }) =>
   simple({
-    sujet: "Attestation d'assurance à vérifier (SEL)",
-    titre: "Nouvelle inscription au SEL",
-    paragraphes: ["Un adhérent s'est inscrit au SEL et a déposé son attestation d'assurance responsabilité civile. Elle attend votre vérification."],
-    bouton: { texte: "Vérifier l'attestation", lien },
+    sujet: "Solde de briques à regarder (SEL)",
+    titre: "Un solde de briques franchit un seuil",
+    paragraphes: [
+      `Le solde du membre ${code} est de ${solde} briques. À -120 briques ou au-delà de 600, le CA prend simplement contact avec la personne : il n'y a ni sanction, ni blocage.`,
+    ],
+    bouton: { texte: "Voir le tableau du SEL", lien },
   });
 
 export const emailInscriptionValidee = ({ prenom, lien }) =>
   simple({
-    sujet: "Votre inscription au SEL est validée",
+    sujet: "Bienvenue dans le SEL",
     titre: "Bienvenue dans le SEL !",
     paragraphes: [
       `Bonjour ${prenom},`,
-      "Votre attestation d'assurance a été vérifiée : vous pouvez maintenant publier des annonces et échanger dans le SEL.",
+      "Votre inscription au SEL est enregistrée : vous pouvez maintenant publier des annonces et échanger avec les autres adhérents.",
     ],
     bouton: { texte: "Entrer dans le SEL", lien },
   });
 
-export const emailInscriptionRefusee = ({ prenom, motif, lien }) =>
+export const emailSignalement = ({ motif, lien }) =>
   simple({
-    sujet: "Votre attestation d'assurance pour le SEL",
-    titre: "Attestation d'assurance à revoir",
-    paragraphes: [
-      `Bonjour ${prenom},`,
-      "Votre attestation d'assurance responsabilité civile n'a pas pu être validée.",
-      motif ? `Motif : ${motif}` : null,
-      "Vous pouvez en déposer une nouvelle depuis la page d'inscription au SEL.",
-    ].filter(Boolean),
-    bouton: { texte: "Déposer une attestation", lien },
+    sujet: "Signalement dans le SEL",
+    titre: "Un contenu du SEL a été signalé",
+    paragraphes: [`Un membre a signalé une annonce ou un message du SEL${motif ? ` (motif : ${motif.toLowerCase()})` : ""}. Il attend l'examen de la modération.`],
+    bouton: { texte: "Voir les signalements", lien },
   });
 
 export const emailLitige = ({ lien }) =>

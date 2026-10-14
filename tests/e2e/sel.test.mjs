@@ -1,13 +1,14 @@
-import { existsSync, readdirSync } from "node:fs";
-import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { DOSSIER_TMP } from "./config.mjs";
-import { BASE, COMPTES, Navigateur, connecte, courriels, dernierCourriel, pause, prisma, texteVisible } from "./outils.mjs";
+import { COMPTES, Navigateur, connecte, courriels, dernierCourriel, pause, prisma, texteVisible } from "./outils.mjs";
 
-const PDF = Buffer.from("%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n");
 const membre = (cle) => prisma.membre.findUnique({ where: { email: COMPTES[cle].email }, include: { alias: true } });
 const aliasDe = async (cle) => (await membre(cle)).alias;
 const rubrique = (code) => prisma.rubriqueSel.findUnique({ where: { code } });
+// Solde du compte de solidarité : mouvements crédités à « null » moins ceux débités de « null »
+async function soldeSolidarite() {
+  const somme = async (where) => (await prisma.transactionBriques.aggregate({ _sum: { montant: true }, where }))._sum.montant ?? 0;
+  return (await somme({ crediteId: null })) - (await somme({ debiteId: null }));
+}
 
 async function publier(nav, champs) {
   const r = await nav.soumettre("/sel/annonces/nouvelle", 'name="titre"', {
@@ -16,10 +17,10 @@ async function publier(nav, champs) {
     rubriqueId: (await rubrique("jardin")).id,
     titre: "Tonte de pelouse",
     description: "Je propose de tondre votre pelouse avec ma tondeuse, le samedi matin de préférence.",
-    zone: "Ménesplet",
     modalite: "PRESENTIEL",
     dureeHeures: "1",
     dureeMinutes: "30",
+    intention: "publier",
     ...champs,
   });
   return { ...r, id: r.location?.match(/annonces\/([^?]+)/)?.[1] };
@@ -29,6 +30,8 @@ async function contacter(nav, annonceId, texte = "Bonjour, votre annonce m'inté
   const r = await nav.soumettre(`/sel/annonces/${annonceId}`, 'id="texte-contact"', { texte });
   return { ...r, id: r.location?.match(/messages\/(.+)$/)?.[1] };
 }
+
+const ASSURANCE = { possedeRc: "on", numeroPolice: "MAIF-123456", compagnie: "MAIF", adresseCompagnie: "200 avenue Salvador Allende, 79000 Niort" };
 
 describe("SEL : qui peut entrer", () => {
   it("un visiteur est renvoyé vers la connexion, qui explique que le SEL est réservé aux adhérents", async () => {
@@ -52,10 +55,10 @@ describe("SEL : qui peut entrer", () => {
     expect(texteVisible((await nav.page("/sel/inscription")).html)).toContain("Bienvenue dans le SEL");
   });
 
-  it("un adhérent dont l'assurance a expiré doit en déposer une nouvelle", async () => {
+  it("un inscrit sans assurance déclarée doit d'abord la déclarer", async () => {
     const nav = await connecte("selExpire");
     expect((await nav.page("/sel")).location).toBe("/sel/inscription");
-    expect(texteVisible((await nav.page("/sel/inscription")).html)).toContain("Votre attestation d'assurance a expiré");
+    expect(texteVisible((await nav.page("/sel/inscription")).html)).toContain("Votre assurance responsabilité civile");
   });
 
   it("un adhérent inscrit et en règle entre dans le SEL", async () => {
@@ -68,97 +71,60 @@ describe("SEL : qui peut entrer", () => {
   });
 });
 
-describe("SEL : inscription et vérification de l'assurance (SEL-2, SEL-21)", () => {
-  const MARQUEUR = 'name="assureur"';
-  const champs = (extra = {}) => ({
-    "accepte-CHARTE_SEL": "on",
-    "accepte-REGLEMENT_SEL": "on",
-    assureur: "MAIF",
-    valideJusquau: `${new Date().getFullYear() + 1}-06-30`,
-    certifie: "on",
-    ...extra,
+describe("SEL : inscription et assurance déclarative (SEL-2, SEL-21)", () => {
+  const MARQUEUR = 'name="numeroPolice"';
+  const inscrire = (nav, extra = {}) =>
+    nav.soumettre("/sel/inscription", MARQUEUR, { "accepte-CHARTE_SEL": "on", "accepte-REGLEMENT_SEL": "on", ...ASSURANCE, ...extra });
+
+  it("aucun document n'est demandé : pas de champ de fichier", async () => {
+    const { html } = await (await connecte("selNouveau")).page("/sel/inscription");
+    expect(html).not.toContain('type="file"');
+    expect(texteVisible(html)).toContain("Je possède une assurance responsabilité civile en cours de validité");
   });
-  const avecFichier = (donnees, contenu = PDF, type = "application/pdf") => {
-    donnees.set("fichier", new File([contenu], "attestation.pdf", { type }));
-    return donnees;
-  };
-  async function deposer(nav, extra) {
-    const donnees = await nav.formulaire("/sel/inscription", MARQUEUR);
-    for (const [k, v] of Object.entries(champs(extra))) v === null ? donnees.delete(k) : donnees.set(k, v);
-    return nav.envoyer("/sel/inscription", avecFichier(donnees));
-  }
 
   it("il faut accepter la Charte et le Règlement du SEL", async () => {
     const nav = await connecte("selNouveau");
-    expect((await deposer(nav, { "accepte-CHARTE_SEL": null })).message).toBe("Vous devez accepter la Charte des membres du SEL.");
-    expect((await deposer(nav, { "accepte-REGLEMENT_SEL": null })).message).toBe("Vous devez accepter le Règlement intérieur du SEL.");
+    expect((await inscrire(nav, { "accepte-CHARTE_SEL": null })).message).toBe("Vous devez accepter la Charte des membres du SEL.");
+    expect((await inscrire(nav, { "accepte-REGLEMENT_SEL": null })).message).toBe("Vous devez accepter le Règlement intérieur du SEL.");
   });
 
-  it("refuse un fichier qui n'est pas vraiment un PDF ou une image", async () => {
-    const nav = await connecte("selNouveau");
-    const donnees = await nav.formulaire("/sel/inscription", MARQUEUR);
-    for (const [k, v] of Object.entries(champs())) donnees.set(k, v);
-    avecFichier(donnees, Buffer.from("<script>alert(1)</script>"), "application/pdf");
-    expect((await nav.envoyer("/sel/inscription", donnees)).message).toBe("Le fichier ne correspond pas à son format.");
+  it.each([
+    [{ possedeRc: null }, /une assurance responsabilité civile en cours de validité est obligatoire/],
+    [{ numeroPolice: "" }, /numéro de votre contrat/],
+    [{ compagnie: "" }, /nom de la compagnie/],
+    [{ adresseCompagnie: "" }, /adresse de la compagnie/],
+  ])("refuse une déclaration incomplète : %j", async (extra, message) => {
+    expect((await inscrire(await connecte("selNouveau"), extra)).message).toMatch(message);
   });
 
-  it("refuse une assurance déjà expirée", async () => {
+  it("l'inscription ouvre le SEL tout de suite, sans vérification par l'association", async () => {
     const nav = await connecte("selNouveau");
-    expect((await deposer(nav, { valideJusquau: "2020-01-01" })).message).toMatch(/n'est plus valable/);
-  });
-
-  it("l'inscription est enregistrée, le Bureau est prévenu, l'accès attend la vérification", async () => {
-    const nav = await connecte("selNouveau");
-    expect((await deposer(nav)).location).toBe("/sel/inscription");
-    expect(texteVisible((await nav.page("/sel/inscription")).html)).toContain("en cours de vérification");
-    expect((await nav.page("/sel")).location).toBe("/sel/inscription");
+    expect((await inscrire(nav)).location).toBe("/sel?bienvenue=1");
+    expect((await nav.page("/sel")).status).toBe(200);
     const m = await membre("selNouveau");
+    const inscription = await prisma.inscriptionSel.findUnique({ where: { membreId: m.id } });
+    expect(inscription.assuranceRc).toMatchObject({ numeroPolice: "MAIF-123456", compagnie: "MAIF", adresseCompagnie: ASSURANCE.adresseCompagnie });
     const acceptes = await prisma.acceptation.findMany({ where: { membreId: m.id }, include: { texte: true } });
     expect(acceptes.map((a) => a.texte.type)).toEqual(expect.arrayContaining(["CHARTE_SEL", "REGLEMENT_SEL"]));
     await pause(200);
-    expect(dernierCourriel(COMPTES.bureau.email).objet).toBe("Attestation d'assurance à vérifier (SEL)");
+    expect(dernierCourriel(COMPTES.selNouveau.email).objet).toBe("Bienvenue dans le SEL");
   });
 
-  it("le fichier est privé : ni un adhérent ni un visiteur ne peuvent l'ouvrir", async () => {
-    const a = await prisma.attestationRc.findFirst({ where: { membre: { email: COMPTES.selNouveau.email }, statut: "EN_ATTENTE" } });
-    expect((await new Navigateur().page(`/admin/sel/attestations/${a.id}/fichier`)).status).toBe(307);
-    expect((await (await connecte("selUn")).page(`/admin/sel/attestations/${a.id}/fichier`)).location).toBe("/espace");
-    expect((await fetch(`${BASE}/medias/${a.fichier}`)).status).toBe(404);
-  });
-
-  it("l'administrateur ouvre l'attestation (journalisé), la valide : le fichier est supprimé et le SEL s'ouvre", async () => {
-    const admin = await connecte("admin");
-    const a = await prisma.attestationRc.findFirst({ where: { membre: { email: COMPTES.selNouveau.email }, statut: "EN_ATTENTE" } });
-    const fichier = await admin.requete(`/admin/sel/attestations/${a.id}/fichier`);
-    expect(fichier.headers.get("content-type")).toBe("application/pdf");
-    expect(await prisma.journalAudit.findFirst({ where: { action: "sel.attestation_consultee", cibleId: a.id } })).toBeTruthy();
-
-    await admin.soumettre("/admin/sel/inscriptions", `value="${a.id}"`, { valideJusquau: `${new Date().getFullYear() + 1}-06-30` });
-    const apres = await prisma.attestationRc.findUnique({ where: { id: a.id } });
-    expect(apres.statut).toBe("VALIDEE");
-    expect(apres.fichier).toBeNull();
-    const dossier = path.join(DOSSIER_TMP, "prive", "attestations");
-    expect(existsSync(dossier) ? readdirSync(dossier).filter((f) => a.fichier.endsWith(f)) : []).toEqual([]);
-
-    await pause(200);
-    expect(dernierCourriel(COMPTES.selNouveau.email).objet).toBe("Votre inscription au SEL est validée");
-    expect((await (await connecte("selNouveau")).page("/sel")).status).toBe(200);
-  });
-
-  it("une attestation refusée : le membre est prévenu et peut en déposer une nouvelle", async () => {
+  it("un inscrit sans assurance la déclare et entre dans le SEL", async () => {
     const nav = await connecte("selRefuse");
-    await deposer(nav);
-    const a = await prisma.attestationRc.findFirst({ where: { membre: { email: COMPTES.selRefuse.email } } });
+    await inscrire(nav);
+    const sans = await connecte("selExpire");
+    const r = await sans.soumettre("/sel/inscription", MARQUEUR, ASSURANCE);
+    expect(r.location).toBe("/sel");
+    expect((await sans.page("/sel")).status).toBe(200);
+  });
+
+  it("un membre met à jour son assurance ; l'administration la voit, sans document", async () => {
+    const nav = await connecte("selUn");
+    const r = await nav.soumettre("/sel/assurance", MARQUEUR, { ...ASSURANCE, numeroPolice: "NOUVEAU-789" });
+    expect(r.message).toBe("Votre assurance est enregistrée.");
     const admin = await connecte("admin");
-    const donnees = await admin.formulaire("/admin/sel/inscriptions", 'name="motif"');
-    donnees.set("id", a.id);
-    donnees.set("motif", "Attestation au nom d'une autre personne");
-    await admin.envoyer("/admin/sel/inscriptions", donnees);
-    expect((await prisma.attestationRc.findUnique({ where: { id: a.id } })).statut).toBe("REFUSEE");
-    await pause(200);
-    expect(dernierCourriel(COMPTES.selRefuse.email).texte).toContain("Attestation au nom d'une autre personne");
-    const page = texteVisible((await nav.page("/sel/inscription")).html);
-    expect(page).toContain("n'a pas pu être validée : Attestation au nom d'une autre personne");
+    expect(texteVisible((await admin.page("/admin/sel/inscriptions")).html)).toContain("NOUVEAU-789");
   });
 });
 
@@ -210,12 +176,37 @@ describe("SEL : annonces (SEL-3 à SEL-6, RG-3, RG-12)", () => {
     expect((await publier(un, { nature: "INCONNUE" })).message).toBe("Choisissez la nature de l'annonce.");
   });
 
-  it("les annonces d'un membre dont l'assurance a expiré sont masquées (SEL-19)", async () => {
-    const expire = await aliasDe("selExpire");
-    await prisma.annonce.create({
-      data: { type: "OFFRE", nature: "SERVICE", rubriqueId: (await rubrique("jardin")).id, titre: "Annonce d'un membre expiré", description: "Elle ne doit pas être visible.", zone: "Ménesplet", modalite: "PRESENTIEL", auteurId: expire.id },
+  it("les annonces d'un membre sans assurance déclarée sont masquées (SEL-19)", async () => {
+    const m = await prisma.membre.create({
+      data: {
+        email: "sans-assurance-annonce@test.local", nom: "Test", prenom: "Sans", statut: "ACTIF",
+        alias: { create: { code: "FAB-SANSRC" } },
+        cotisations: { create: { montant: 1, modeReglement: "ESPECES", recueLe: new Date(), valideJusquau: new Date(Date.UTC(new Date().getUTCFullYear() + 1, 11, 31)), saisieParId: (await membre("bureau")).id } },
+        inscriptionSel: { create: {} },
+      },
+      include: { alias: true },
     });
-    expect(texteVisible((await deux.page("/sel")).html)).not.toContain("Annonce d'un membre expiré");
+    await prisma.annonce.create({
+      data: { type: "OFFRE", nature: "SERVICE", rubriqueId: (await rubrique("jardin")).id, titre: "Annonce d'un membre sans assurance", description: "Elle ne doit pas être visible.", modalite: "PRESENTIEL", auteurId: m.alias.id },
+    });
+    expect(texteVisible((await deux.page("/sel")).html)).not.toContain("Annonce d'un membre sans assurance");
+  });
+
+  it("une annonce peut rester en brouillon, visible de son seul auteur, puis être publiée (SEL-5)", async () => {
+    const r = await publier(un, { titre: "Cours de guitare", description: "Je propose des cours de guitare pour débutants, le mercredi après-midi.", intention: "brouillon" });
+    expect(r.location).toMatch(/\?brouillon=1$/);
+    expect((await prisma.annonce.findUnique({ where: { id: r.id } })).statut).toBe("BROUILLON");
+    expect(texteVisible((await deux.page("/sel")).html)).not.toContain("Cours de guitare");
+    expect((await deux.page(`/sel/annonces/${r.id}`)).status).toBe(404);
+    expect(texteVisible((await un.page("/sel/mes-annonces")).html)).toContain("Brouillons (1)");
+    await un.soumettre(`/sel/annonces/${r.id}`, "Publier l&#x27;annonce");
+    expect(texteVisible((await deux.page("/sel")).html)).toContain("Cours de guitare");
+  });
+
+  it("aucune localisation n'est demandée : seulement « présentiel » ou « à distance »", async () => {
+    const { html } = await un.page("/sel/annonces/nouvelle");
+    expect(html).not.toContain('name="zone"');
+    expect(texteVisible(html)).toContain("En présentiel");
   });
 
   it("l'auteur peut clore son annonce, qui disparaît de la bibliothèque, puis la republier", async () => {
@@ -294,12 +285,15 @@ describe("SEL : messagerie, anonymat et échange complet en briques", () => {
   it("levée d'anonymat : visible seulement quand les deux ont accepté, et journalisée (section 6.5)", async () => {
     const auteur = await membre("selUn");
     const interlocuteur = await membre("selDeux");
-    await deux.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on" });
+    await deux.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on", raison: "presentiel" });
     expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).not.toContain(`${auteur.prenom} ${auteur.nom}`);
-    await un.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on" });
+    await un.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on", raison: "presentiel" });
     expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).toContain(`${auteur.prenom} ${auteur.nom}`);
     expect(texteVisible((await un.page(`/sel/messages/${idConv}`)).html)).toContain(`${interlocuteur.prenom} ${interlocuteur.nom}`);
-    expect(await prisma.journalAudit.findFirst({ where: { action: "sel.anonymat_leve", cibleId: idConv } })).toBeTruthy();
+    const trace = await prisma.journalAudit.findFirst({ where: { action: "sel.anonymat_leve", cibleId: idConv } });
+    // Qui, quand, pourquoi ; nom, prénom et adresse révélés
+    expect(trace).toMatchObject({ acteurId: auteur.id, motif: "Rencontre en personne" });
+    expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).toContain(auteur.adresse);
   });
 
   it("le bénéficiaire propose le rendez-vous (heure de Ménesplet), le prestataire le confirme", async () => {
@@ -351,14 +345,14 @@ describe("SEL : messagerie, anonymat et échange complet en briques", () => {
   });
 });
 
-describe("SEL : solde minimum, litige, modération, blocage", () => {
+describe("SEL : soldes, solidarité, litige, modération, blocage", () => {
   let un, pauvre, trois, admin, idDistance;
   beforeAll(async () => {
     un = await connecte("selUn");
     pauvre = await connecte("selPauvre");
     trois = await connecte("selTrois");
     admin = await connecte("admin");
-    idDistance = (await publier(un, { titre: "Aide informatique à distance", description: "Je vous aide à installer et utiliser une application, en visio.", modalite: "DISTANCE", rubriqueId: (await rubrique("informatique")).id })).id;
+    idDistance = (await publier(un, { titre: "Aide informatique à distance", description: "Je vous aide à installer et utiliser une application, en visio.", modalite: "DISTANCE", rubriqueId: (await rubrique("savoirs")).id })).id;
   });
 
   async function echangeJusquaDeclaration(nav, minutes) {
@@ -371,23 +365,35 @@ describe("SEL : solde minimum, litige, modération, blocage", () => {
     return conv;
   }
 
-  it("une confirmation qui ferait passer le solde sous -120 est bloquée (SEL-22)", async () => {
-    await prisma.alias.update({ where: { id: (await aliasDe("selPauvre")).id }, data: { soldeBriques: -100 } });
-    const conv = await echangeJusquaDeclaration(pauvre, 30);
-    const r = await pauvre.soumettre(`/sel/messages/${conv}`, 'name="avis"');
-    expect(r.message).toMatch(/ne peut pas descendre sous -120/);
-    expect((await aliasDe("selPauvre")).soldeBriques).toBe(-100);
-    expect((await prisma.echange.findFirst({ where: { conversationId: conv } })).statut).toBe("DECLARE");
-  });
-
-  it("avec une dérogation accordée par un administrateur, la confirmation passe", async () => {
+  it("le solde peut passer sous -120 sans blocage ; le CA est alerté (SEL-22)", async () => {
     const alias = await aliasDe("selPauvre");
-    await admin.soumettre("/admin/sel/inscriptions", `value="${alias.id}"`, { plancher: "-200" });
-    expect((await aliasDe("selPauvre")).plancherBriques).toBe(-200);
-    const conv = (await prisma.conversation.findFirst({ where: { annonceId: idDistance, interlocuteurId: alias.id } })).id;
+    await prisma.alias.update({ where: { id: alias.id }, data: { soldeBriques: -100 } });
+    const conv = await echangeJusquaDeclaration(pauvre, 30);
     await pauvre.soumettre(`/sel/messages/${conv}`, 'name="avis"');
     expect((await prisma.echange.findFirst({ where: { conversationId: conv } })).statut).toBe("TERMINE");
     expect((await aliasDe("selPauvre")).soldeBriques).toBe(-130);
+    expect(await prisma.journalAudit.findFirst({ where: { action: "sel.alerte_solde", cibleId: alias.id } })).toBeTruthy();
+    await pause(200);
+    expect(courriels().some((c) => c.a === COMPTES.bureau.email && c.objet === "Solde de briques à regarder (SEL)" && c.texte.includes(alias.code))).toBe(true);
+  });
+
+  it("un membre donne des briques au compte de solidarité, sans pouvoir donner plus que son solde (SEL-25)", async () => {
+    const avant = await soldeSolidarite();
+    const soldeUn = (await aliasDe("selUn")).soldeBriques;
+    expect((await un.soumettre("/sel/briques", 'name="montant"', { montant: String(soldeUn + 1) })).message).toBe("Votre solde ne permet pas ce don.");
+    expect((await un.soumettre("/sel/briques", 'name="montant"', { montant: "10" })).message).toMatch(/10 briques versées/);
+    expect((await aliasDe("selUn")).soldeBriques).toBe(soldeUn - 10);
+    expect((await soldeSolidarite()) - avant).toBeGreaterThanOrEqual(10);
+  });
+
+  it("un administrateur vient en aide à un membre avec le compte de solidarité, dans la limite de son solde", async () => {
+    const alias = await aliasDe("selPauvre");
+    expect((await admin.soumettre("/admin/sel/solidarite", 'name="code"', { code: alias.code, montant: "999999999", motif: "Aide trop grosse" })).message)
+      .toBe("Le compte de solidarité n'a pas assez de briques.");
+    const r = await admin.soumettre("/admin/sel/solidarite", 'name="code"', { code: alias.code, montant: "5", motif: "Coup de pouce après un imprévu" });
+    expect(r.message).toBe(`5 briques versées à ${alias.code}.`);
+    expect((await aliasDe("selPauvre")).soldeBriques).toBe(-125);
+    expect(await prisma.journalAudit.findFirst({ where: { action: "sel.aide_solidarite", cibleId: alias.id, motif: "Coup de pouce après un imprévu" } })).toBeTruthy();
   });
 
   it("contester une déclaration ouvre un litige ; l'administration tranche après médiation (SEL-8)", async () => {
@@ -405,6 +411,19 @@ describe("SEL : solde minimum, litige, modération, blocage", () => {
     await admin.soumettre("/admin/sel", `value="${e.id}"`, { decision: "annuler", note: "Après médiation, échange annulé d'un commun accord." });
     expect((await prisma.echange.findUnique({ where: { id: e.id } })).statut).toBe("ANNULE");
     expect((await aliasDe("selTrois")).soldeBriques).toBe(avant);
+  });
+
+  it("dès qu'un mineur est concerné, même à distance, la levée d'anonymat est obligatoire (RG-14)", async () => {
+    const m = await membre("selPauvre");
+    const conv = await prisma.conversation.findFirst({ where: { annonceId: idDistance, interlocuteurId: m.alias.id } });
+    await prisma.membre.update({ where: { id: m.id }, data: { dateNaissance: new Date(Date.now() - 12 * 365 * 86_400_000) } });
+    try {
+      const { html } = await pauvre.page(`/sel/messages/${conv.id}`);
+      expect(texteVisible(html)).toContain("révélez d'abord vos identités");
+      expect(html).not.toContain('name="lieu"');
+    } finally {
+      await prisma.membre.update({ where: { id: m.id }, data: { dateNaissance: m.dateNaissance } });
+    }
   });
 
   it("un administrateur ne peut pas lire une conversation sans signalement ni litige (MSG-11)", async () => {

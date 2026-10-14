@@ -57,8 +57,8 @@ describe("statuts, règlement, charte : versions (ADM-11, PRE-5)", () => {
     expect(r.message).toMatch(/texte complet/);
   });
 
-  it("un administrateur qui n'est pas au Bureau ne peut pas publier, même en rejouant la requête", async () => {
-    const admin = await connecte("admin");
+  it("un adhérent ne peut pas publier de texte, même en rejouant la requête", async () => {
+    const admin = await connecte("adherent");
     const donnees = await bureau.formulaire("/admin/textes", NOUVELLE);
     for (const [k, v] of Object.entries({ type: "STATUTS", version: "pirate", enVigueurLe: "2026-10-01", titre: "Statuts pirates", contenu: "Ce texte ne doit jamais être enregistré en base." })) {
       donnees.set(k, v);

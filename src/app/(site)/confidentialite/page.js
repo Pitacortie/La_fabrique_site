@@ -13,8 +13,9 @@ export default function Confidentialite() {
       <h2>Le SEL</h2>
       <p>
         Dans le SEL, vos annonces et vos messages sont enregistrés sous votre code personnel, jamais sous votre nom. Votre
-        identité n'est communiquée qu'à la personne avec qui vous échangez, avec votre accord et le sien. Votre
-        attestation d'assurance est supprimée dès qu'elle a été vérifiée : seule sa date de validité est conservée.
+        identité (nom, prénom et adresse) n'est communiquée qu'à la personne avec qui vous échangez, avec votre accord et
+        le sien. Pour l'assurance responsabilité civile, seuls le numéro de contrat, le nom et l'adresse de la compagnie
+        sont enregistrés : aucun document n'est demandé. Les conversations sont conservées un an après leur clôture.
         Les administrateurs ne lisent une conversation qu'en cas de signalement ou de litige, et chaque lecture est
         enregistrée.
       </p>

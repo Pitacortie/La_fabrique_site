@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
-import { ajouterPhoto, basculerAutorisation, supprimerPhoto } from "./actions";
+import { ajouterPhoto, supprimerPhoto } from "./actions";
 
 export default function Photos({ articleId, medias }) {
   const formRef = useRef(null);
@@ -21,25 +21,12 @@ export default function Photos({ articleId, medias }) {
           {medias.map((m) => (
             <figure key={m.id} className="carte">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={m.url} alt={m.texteAlternatif} />
+              <img src={m.url} alt={m.texteAlternatif ?? ""} />
               <figcaption>
-                <p className="meta">{m.texteAlternatif}</p>
+                {m.texteAlternatif && <p className="meta">{m.texteAlternatif}</p>}
                 {m.legende && <p>{m.legende}</p>}
                 {m.credit && <p className="meta">© {m.credit}</p>}
-                <p>
-                  {m.autorisationPublication ? (
-                    <span className="badge">Droit à l'image : accord confirmé</span>
-                  ) : (
-                    <span className="badge badge-terracotta">Accord non confirmé : non publiée</span>
-                  )}
-                </p>
                 <div className="actions">
-                  <form action={basculerAutorisation}>
-                    <input type="hidden" name="id" value={m.id} />
-                    <BoutonEnvoi className="lien-action" enCours="…">
-                      {m.autorisationPublication ? "Retirer l'accord" : "Confirmer l'accord"}
-                    </BoutonEnvoi>
-                  </form>
                   <form action={supprimerPhoto}>
                     <input type="hidden" name="id" value={m.id} />
                     <BoutonEnvoi className="lien-danger" enCours="Suppression…">Supprimer</BoutonEnvoi>
@@ -61,8 +48,8 @@ export default function Photos({ articleId, medias }) {
             <span className="aide">Elle est redimensionnée et compressée automatiquement.</span>
           </div>
           <div className="champ" style={{ marginTop: "1rem" }}>
-            <label htmlFor="texteAlternatif">Texte alternatif <span className="obligatoire">*</span></label>
-            <input id="texteAlternatif" name="texteAlternatif" type="text" required minLength={5} maxLength={300}
+            <label htmlFor="texteAlternatif">Texte alternatif (facultatif)</label>
+            <input id="texteAlternatif" name="texteAlternatif" type="text" maxLength={300}
               placeholder="Ex. : Des habitants plantent des salades au jardin partagé" />
             <span className="aide">Décrit la photo pour les personnes qui ne la voient pas (accessibilité).</span>
           </div>
@@ -76,13 +63,10 @@ export default function Photos({ articleId, medias }) {
               <input id="credit" name="credit" type="text" maxLength={100} />
             </div>
           </div>
-          <label className="case">
-            <input type="checkbox" name="autorisation" />
-            <span>
-              Aucune personne n'est identifiable, ou toutes les personnes visibles (ou leur représentant légal pour un
-              mineur) ont donné leur accord. Vérifiez le choix de droit à l'image des membres dans leur fiche.
-            </span>
-          </label>
+          <p className="meta">
+            Avant la prise de vue, demandez l'accord des personnes photographiées. Le choix de droit à l'image de chaque
+            membre figure dans sa fiche ; une photo peut être retirée à tout moment sur demande.
+          </p>
         </fieldset>
         <div className="actions">
           <BoutonEnvoi enCours="Import en cours…">Ajouter la photo</BoutonEnvoi>

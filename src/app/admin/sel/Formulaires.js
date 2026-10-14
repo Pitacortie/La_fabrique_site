@@ -3,34 +3,31 @@
 import { useActionState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
-import { enregistrerRubrique, refuserAttestation, trancherLitige, validerAttestation } from "./actions";
-import { ChampDate } from "@/components/ChampsDate";
+import { aiderAvecSolidarite, enregistrerRubrique, trancherLitige } from "./actions";
 
-export function VerificationAttestation({ id, dateDeclaree, demain }) {
-  const [etatV, valider] = useActionState(validerAttestation, null);
-  const [etatR, refuser] = useActionState(refuserAttestation, null);
-  if (etatV?.ok || etatR?.ok) return <Retour etat={etatV?.ok ? etatV : etatR} />;
+export function AideSolidarite() {
+  const [etat, action] = useActionState(aiderAvecSolidarite, null);
   return (
-    <div className="actions" style={{ alignItems: "flex-end" }}>
-      <form action={valider} className="actions">
-        <input type="hidden" name="id" value={id} />
-        <Retour etat={etatV} />
-        <label className="champ">
-          <span className="champ-libelle">Valable jusqu'au (lu sur l'attestation)</span>
-          <ChampDate name="valideJusquau" required min={demain} defaultValue={dateDeclaree} />
-        </label>
-        <BoutonEnvoi className="bouton bouton-vert">Valider</BoutonEnvoi>
-      </form>
-      <details>
-        <summary className="lien-danger">Refuser</summary>
-        <form action={refuser} className="actions" style={{ marginTop: "0.5rem" }}>
-          <input type="hidden" name="id" value={id} />
-          <Retour etat={etatR} />
-          <input type="text" name="motif" maxLength={500} placeholder="Motif (envoyé au membre)" aria-label="Motif du refus" />
-          <BoutonEnvoi className="bouton bouton-danger">Refuser</BoutonEnvoi>
-        </form>
-      </details>
-    </div>
+    <form action={action} className="formulaire" style={{ maxWidth: "none" }}>
+      <Retour etat={etat} />
+      <div className="champs">
+        <div className="champ">
+          <label htmlFor="code">Code du membre aidé</label>
+          <input id="code" name="code" type="text" required maxLength={20} placeholder="FAB-…" autoComplete="off" />
+        </div>
+        <div className="champ">
+          <label htmlFor="montant">Briques</label>
+          <input id="montant" name="montant" type="number" min={1} step={1} required />
+        </div>
+      </div>
+      <div className="champ" style={{ marginTop: "1rem" }}>
+        <label htmlFor="motif">Motif (conservé au journal)</label>
+        <input id="motif" name="motif" type="text" required minLength={5} maxLength={300} />
+      </div>
+      <div className="actions">
+        <BoutonEnvoi className="bouton">Verser l'aide</BoutonEnvoi>
+      </div>
+    </form>
   );
 }
 

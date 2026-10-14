@@ -95,7 +95,7 @@ export async function validerDemande(_etat, formData) {
   redirect(`/admin/demandes/${id}?valide=1`);
 }
 
-// ADH-5 : refus, avec un motif facultatif envoyé au postulant (statuts art. 9 : le motif n'est pas obligatoire).
+// ADH-5, RG-6 : refus non motivé. Le postulant est informé par courriel ; une note interne facultative reste dans la console.
 export async function refuserDemande(_etat, formData) {
   const bureau = await exigerBureau();
   const id = String(formData.get("id") ?? "");
@@ -110,7 +110,7 @@ export async function refuserDemande(_etat, formData) {
   await journaliser({ acteurId: bureau.id, action: "demande.refusee", cibleType: "DemandeAdhesion", cibleId: id, motif });
 
   const lienContact = `${await urlDuSite()}/contact`;
-  await envoyerEmail({ a: d.email, ...emailRefus({ prenom: d.prenom, motif, lienContact }) }).catch((e) =>
+  await envoyerEmail({ a: d.email, ...emailRefus({ prenom: d.prenom, lienContact }) }).catch((e) =>
     console.error("Courriel de refus non envoyé :", e.message),
   );
   revalidatePath("/admin", "layout");

@@ -30,7 +30,6 @@ async function main() {
       statut: "ACTIF",
       role: "BUREAU",
       categorie: "FONDATEUR",
-      peutPublier: true,
       alias: { create: { code: genererCode() } },
     },
   });
@@ -87,9 +86,8 @@ async function main() {
     ["maison", "Maison et bricolage", "Petit bricolage, montage de meubles, aide à la peinture, aide à un déménagement, couture, repassage", "Ces coups de main ne remplacent pas l'intervention d'un professionnel."],
     ["jardin", "Jardin et extérieur", "Tonte, désherbage, taille de petits arbustes, arrosage pendant une absence, graines et plants", null],
     ["cuisine", "Cuisine et alimentation", "Préparation d'un repas, atelier pâtisserie, conserves, fabrication de pain, partage de surplus", "Respectez les règles d'hygiène pour les denrées partagées."],
-    ["informatique", "Informatique et numérique", "Prise en main d'un ordinateur ou d'un smartphone, installation d'une application, sécurité des comptes", "Ne confiez jamais un mot de passe."],
     ["administratif", "Administratif et vie quotidienne", "Courrier, aide à un formulaire, CV, démarches en ligne", "Ne remplace pas un professionnel ; attention aux données personnelles sensibles."],
-    ["savoirs", "Savoirs et apprentissages", "Soutien scolaire, langues, mathématiques, photographie, musique, préparation d'un examen", null],
+    ["savoirs", "Savoirs et apprentissages", "Soutien scolaire, langues, mathématiques, photographie, musique, préparation d'un examen, prise en main d'un ordinateur ou d'un smartphone, démarches numériques", "Ne confiez jamais un mot de passe."],
     ["creation", "Création et loisirs", "Couture, tricot, dessin, jeux de société, prêt de livres, atelier entre adhérents", null],
     ["mobilite", "Mobilité et déplacements", "Covoiturage ponctuel, accompagnement pour une course ou un rendez-vous, transport d'un objet", "Les frais (carburant, péages) se règlent en euros, convenus avant l'échange, hors briques."],
     ["animaux", "Animaux", "Promenade d'un chien, garde ponctuelle, transport d'un animal", "Le propriétaire reste responsable et informe sur le comportement de son animal."],
@@ -100,23 +98,40 @@ async function main() {
   for (const [i, [code, libelle, exemples, rappel]] of rubriques.entries()) {
     await prisma.rubriqueSel.upsert({ where: { code }, update: {}, create: { code, libelle, exemples, rappel, ordre: i + 1 } });
   }
+  // Onze rubriques : « Informatique et numérique » est fusionnée dans « Savoirs et apprentissages »
+  const informatique = await prisma.rubriqueSel.findUnique({ where: { code: "informatique" } });
+  if (informatique) {
+    const savoirs = await prisma.rubriqueSel.findUnique({ where: { code: "savoirs" } });
+    await prisma.annonce.updateMany({ where: { rubriqueId: informatique.id }, data: { rubriqueId: savoirs.id } });
+    await prisma.rubriqueSel.delete({ where: { id: informatique.id } });
+    const [, , exemples, rappel] = rubriques.find(([c]) => c === "savoirs");
+    await prisma.rubriqueSel.update({ where: { id: savoirs.id }, data: { exemples, rappel } });
+    for (const [i, [code]] of rubriques.entries()) await prisma.rubriqueSel.update({ where: { code }, data: { ordre: i + 1 } });
+  }
 
-  // Nos « Fabrications » (FAB-2) : créées une seule fois, ensuite gérées depuis la console.
+  // « Nos initiatives » (FAB-2 à FAB-4) : créées une seule fois, ensuite gérées sur le site (crayon ✏️).
+  const SEL = "Système d'échange local : services et objets échangés entre adhérents, en briques, sans argent.";
   if ((await prisma.fabrication.count()) === 0) {
     await prisma.fabrication.createMany({
       data: [
-        { nom: "Le SEL", description: "Service d'échange local : services et objets échangés entre adhérents, en briques, sans argent.", etat: "Ouvert", couleur: "terracotta", lien: "/sel", ordre: 1 },
+        { nom: "Le SEL", description: SEL, etat: "Ouvert", couleur: "terracotta", lien: "/sel", ordre: 1 },
         { nom: "Café citoyen", description: "Contenu en cours de définition.", etat: "À venir", couleur: "bleu", ordre: 2 },
-        { nom: "Plan de Sauvegarde", description: "Contenu en cours de définition.", etat: "À venir", couleur: "vert", ordre: 3 },
+        { nom: "La gazette de la Fabrique", description: "Le journal de l'association : tous les numéros et les archives.", etat: "Ouvert", couleur: "ocre", lien: "/gazette", ordre: 3 },
+        { nom: "Plan de Sauvegarde", description: "Contenu en cours de définition.", etat: "À venir", couleur: "vert", ordre: 4 },
       ],
     });
   }
-
-  // Le SEL est ouvert : on met à jour la carte créée avant son ouverture (si personne ne l'a modifiée depuis)
+  // Mises à jour des cartes créées par une version précédente (si personne ne les a modifiées depuis)
   await prisma.fabrication.updateMany({
-    where: { nom: "Le SEL", etat: "Ouverture prochaine" },
-    data: { etat: "Ouvert", description: "Service d'échange local : services et objets échangés entre adhérents, en briques, sans argent." },
+    where: { nom: "Le SEL", description: { startsWith: "Service d'échange local" } },
+    data: { etat: "Ouvert", description: SEL },
   });
+  if (!(await prisma.fabrication.findFirst({ where: { lien: "/gazette" } }))) {
+    await prisma.fabrication.updateMany({ where: { nom: "Plan de Sauvegarde", ordre: 3 }, data: { ordre: 4 } });
+    await prisma.fabrication.create({
+      data: { nom: "La gazette de la Fabrique", description: "Le journal de l'association : tous les numéros et les archives.", etat: "Ouvert", couleur: "ocre", lien: "/gazette", ordre: 3 },
+    });
+  }
 
   const articles = [
     {

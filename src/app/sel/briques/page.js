@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatHorodatage } from "@/lib/heure-paris";
 import { exigerAccesSel } from "@/lib/sel/acces";
-import { ALERTE_BRIQUES, plancher } from "@/lib/sel/regles";
+import { ALERTE_BRIQUES, SEUIL_BAS } from "@/lib/sel/regles";
+import FormulaireDon from "./FormulaireDon";
 
 export const metadata = { title: "Mes briques" };
 
@@ -29,9 +31,20 @@ export default async function Briques() {
         <div className="stat"><div className="valeur">−{donnees}</div><div className="libelle">Briques versées pour des services reçus</div></div>
       </div>
       <p className="meta">
-        Le solde peut être négatif, jusqu'à {plancher(alias)} briques. Au-delà de {ALERTE_BRIQUES}, le CA vous proposera simplement d'en
-        discuter : c'est le signe que vous rendez beaucoup de services !
+        Tout le monde commence à zéro et le solde peut être négatif. À {SEUIL_BAS} briques ou au-delà de {ALERTE_BRIQUES}, le CA vous
+        proposera simplement d'en discuter : il n'y a ni sanction, ni blocage.
       </p>
+
+      <section className="carte section-admin">
+        <h2>Compte d'urgence et de solidarité</h2>
+        <p>
+          Il permet à l'association de venir en aide à un membre en difficulté. Vous pouvez lui donner une partie de vos
+          briques. Les soldes des comptes clôturés lui sont aussi versés.
+        </p>
+        <FormulaireDon solde={alias.soldeBriques} />
+      </section>
+
+      <p className="meta"><Link href="/sel/assurance">Mon assurance responsabilité civile →</Link></p>
 
       <h2>Historique</h2>
       <div className="tableau-conteneur">

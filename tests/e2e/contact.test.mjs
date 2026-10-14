@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { COMPTES, Navigateur, connecte, courriels, dernierCourriel, pause, prisma, texteVisible } from "./outils.mjs";
 
 const FORMULAIRE = 'name="texte"';
-const ASSOCIATION = "contact@lafabriquedemenesplet.fr";
 
 describe("formulaire Contacts (CTC-1 à CTC-5, ADM-4)", () => {
   it("le message est enregistré, transmis à l'association et accusé auprès de l'expéditeur", async () => {
@@ -14,12 +13,12 @@ describe("formulaire Contacts (CTC-1 à CTC-5, ADM-4)", () => {
     });
     expect(r.message).toMatch(/votre message a bien été envoyé/);
     const m = await prisma.messageContact.findFirst({ where: { email: "jeanne@exemple.fr" } });
-    expect(m.sujet).toBe("Vos attentes, vos projets");
+    expect(m.sujet).toBe("Boîte à idées");
     expect(m.statut).toBe("NOUVEAU");
 
     await pause(200);
-    const pourAssociation = dernierCourriel(ASSOCIATION);
-    expect(pourAssociation.objet).toBe("Nouveau message : Vos attentes, vos projets");
+    const pourAssociation = dernierCourriel(COMPTES.bureau.email);
+    expect(pourAssociation.objet).toBe("Nouveau message : Boîte à idées");
     expect(pourAssociation.texte).toContain("atelier de réparation de vélos");
     const accuse = dernierCourriel("jeanne@exemple.fr");
     expect(accuse.objet).toBe("Votre message a bien été reçu");
@@ -57,7 +56,7 @@ describe("formulaire Contacts (CTC-1 à CTC-5, ADM-4)", () => {
     expect(r.message).toMatch(/plusieurs messages récemment/);
   });
 
-  it("« ?sujet=projet » préselectionne « Vos attentes, vos projets » (PRJ-2)", async () => {
+  it("« ?sujet=projet » préselectionne « Boîte à idées » (PRJ-2)", async () => {
     expect((await new Navigateur().page("/contact?sujet=projet")).html).toMatch(/<option value="projet" selected="">/);
   });
 

@@ -9,7 +9,7 @@ export default async function BibliothequeAnnonces({ type, searchParams, chemin 
   const { alias } = await exigerAccesSel(chemin);
   const filtres = await searchParams;
   const [annonces, rubriques] = await Promise.all([listerAnnonces({ type, ...filtres }), rubriquesActives()]);
-  const actifs = ["q", "rubrique", "nature", "modalite", "zone"].some((k) => filtres[k]);
+  const actifs = ["q", "rubrique", "nature", "modalite"].some((k) => filtres[k]);
 
   return (
     <>
@@ -46,7 +46,6 @@ export default async function BibliothequeAnnonces({ type, searchParams, chemin 
               <option key={v} value={v}>{l}</option>
             ))}
           </select>
-          <input name="zone" type="text" defaultValue={filtres.zone ?? ""} placeholder="Commune" aria-label="Commune" maxLength={60} />
           {actifs && <Link href={chemin}>Effacer les filtres</Link>}
         </div>
       </form>

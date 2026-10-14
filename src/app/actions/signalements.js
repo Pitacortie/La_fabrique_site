@@ -4,10 +4,10 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { journaliser } from "@/lib/audit";
+import { alerter } from "@/lib/alertes";
 import { exigerAdmin, getMembreConnecte } from "@/lib/auth";
-import { getContenus } from "@/lib/contenus";
 import { prisma } from "@/lib/db";
-import { envoyerEmail, urlDuSite } from "@/lib/email";
+import { urlDuSite } from "@/lib/email";
 import { limiter } from "@/lib/rate-limit";
 import { ipClient } from "@/lib/requete";
 import { pageSansSecret } from "@/lib/signalements";
@@ -51,14 +51,12 @@ export async function signalerBug(_etat, formData) {
     },
   });
 
-  // Prévient l'association (adresse de contact du site). En développement, le courriel s'affiche dans le terminal.
-  const { "site.email": contact } = await getContenus(["site.email"]);
+  // Prévient ceux qui ont activé l'alerte. En développement, le courriel s'affiche dans le terminal.
   const lien = `${await urlDuSite()}/admin/signalements`;
-  await envoyerEmail({
-    a: contact,
+  await alerter("BUG", {
     sujet: `Bug signalé sur ${signalement.page}`,
     texte: `Un bug a été signalé sur le site.\n\nPage : ${signalement.page}\nPar : ${signalement.email ?? "visiteur anonyme"}\n\n${signalement.description}\n\nTous les signalements : ${lien}`,
-  }).catch((e) => console.error("Courriel de signalement non envoyé :", e.message));
+  });
 
   return { ok: "Merci, votre signalement a bien été envoyé." };
 }

@@ -5,7 +5,7 @@ const PAGES = [
   ["/", "La Fabrique de Ménesplet"],
   ["/presentation", "Qui sommes-nous"],
   ["/documents", "Nos textes"],
-  ["/actualites", "Actualités et galerie"],
+  ["/actualites", "Actualités"],
   ["/le-sel", "Le SEL"],
   ["/contact", "Contacts"],
   ["/adherer", "Bulletin d'adhésion"],
@@ -64,11 +64,12 @@ describe("pages publiques", () => {
     expect((await visiteur.page("/")).html).not.toContain('href="#"');
   });
 
-  it("l'accueil montre les derniers articles et « Nos Fabrications » (ACC-5, FAB-2)", async () => {
+  it("l'accueil montre « Nos initiatives », sans bloc d'actualités (FAB-2, ACC-5 retirée)", async () => {
     const texte = texteVisible((await visiteur.page("/")).html);
-    expect(texte).toContain("Dernières actualités");
-    expect(texte).toContain("Auberge espagnole");
+    expect(texte).toContain("Nos initiatives");
     expect(texte).toContain("Café citoyen");
+    expect(texte).toContain("La gazette de la Fabrique");
+    expect(texte).not.toContain("Dernières actualités");
   });
 
   it("les trois textes officiels sont consultables (PRE-5)", async () => {
@@ -76,6 +77,35 @@ describe("pages publiques", () => {
     expect(texte).toContain("Statuts de La Fabrique de Ménesplet");
     expect(texte).toContain("Règlement intérieur");
     expect(texte).toContain("Charte de neutralité");
+  });
+
+  it("les textes officiels se téléchargent (PRE-2, PRE-5)", async () => {
+    const r = await fetch(`${BASE}/documents/statuts`);
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-disposition")).toMatch(/^attachment; filename="statuts-version-/);
+    expect(await r.text()).toContain("Statuts de La Fabrique de Ménesplet");
+    expect((await fetch(`${BASE}/documents/inconnu`)).status).toBe(404);
+  });
+
+  it("la présentation et la page du SEL reprennent les textes de l'association", async () => {
+    const pres = texteVisible((await visiteur.page("/presentation")).html);
+    expect(pres).toContain("Une association ouverte à toutes les générations");
+    expect(pres).toContain("dès 13 ans");
+    expect(pres).toContain("à partir d'1 euro par an");
+    const sel = texteVisible((await visiteur.page("/le-sel")).html);
+    expect(sel).toContain("Échanger autrement, près de chez soi");
+    expect(sel).toContain("les échanges circulent à l'intérieur du réseau");
+    expect(sel).toContain("réciprocité, confiance, respect, convivialité et liberté de participer");
+  });
+
+  it("la présentation décrit les consultations citoyennes (PRE-7)", async () => {
+    expect(texteVisible((await visiteur.page("/presentation")).html)).toContain("Les consultations citoyennes");
+  });
+
+  it("l'agenda et la gazette figurent dans le menu (P10, P11)", async () => {
+    const { html } = await visiteur.page("/");
+    expect(html).toContain('href="/agenda"');
+    expect(html).toContain('href="/gazette"');
   });
 
   it("le formulaire d'adhésion exige les trois acceptations, non précochées (ADH-2)", async () => {

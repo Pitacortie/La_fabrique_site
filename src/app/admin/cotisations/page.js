@@ -30,7 +30,7 @@ export default async function Cotisations() {
         <h1>Cotisations</h1>
       </div>
       <p className="chapo">
-        Aucun paiement en ligne : les cotisations reçues sont enregistrées ici par un membre du Bureau (1 € minimum par
+        Aucun paiement en ligne : les cotisations reçues sont enregistrées ici par un administrateur (1 € minimum par
         année civile).
       </p>
 
@@ -43,7 +43,8 @@ export default async function Cotisations() {
         <h2>Rappels de renouvellement</h2>
         <p>
           Du 1er décembre au 31 janvier, chaque membre qui n'a pas renouvelé reçoit un rappel par e-mail, au plus une
-          fois toutes les deux semaines, avec les modalités de paiement de la page Adhérer.{" "}
+          fois toutes les deux semaines, avec les modalités de paiement de la page Adhérer. Sans renouvellement, deux
+          rappels partent encore pendant les 30 jours qui suivent ; la clôture du compte est ensuite décidée par le CA.{" "}
           {annee ? <strong>Période en cours : renouvellement {annee}.</strong> : "Nous ne sommes pas en période de renouvellement."}
         </p>
         <BoutonRappels periode={!!annee} />

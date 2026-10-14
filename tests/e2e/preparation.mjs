@@ -16,7 +16,6 @@ const ENV_SERVEUR = {
   APP_URL: BASE,
   SMTP_HOST: "", // courriels écrits dans le journal du serveur, lus par les tests
   UPLOADS_DIR: path.join(DOSSIER_TMP, "uploads"),
-  PRIVATE_UPLOADS_DIR: path.join(DOSSIER_TMP, "prive"),
   TACHES_SECRET: TACHES_SECRET_TEST,
   TACHES_DATE_TEST_AUTORISEE: "1", // permet aux tests de simuler la date des rappels de cotisation
   NEXT_TELEMETRY_DISABLED: "1",
@@ -71,13 +70,16 @@ async function creerComptes() {
         commune: "Ménesplet",
         statut: c.statut ?? "ACTIF",
         role: c.role,
-        peutPublier: c.peutPublier ?? false,
         alias: { create: { code: `FAB-TEST${String(++n).padStart(2, "0")}` } },
       },
     });
   }
-  // Comptes du SEL : cotisation à jour, inscription, attestation d'assurance validée (ou expirée)
-  const bureau = await prisma.membre.findUnique({ where: { email: COMPTES.bureau.email } });
+  // Comptes du SEL : cotisation à jour, inscription, assurance déclarée (sauf « sans-assurance »)
+  // Le compte Bureau de test reçoit toutes les alertes (aucune n'est active par défaut)
+  const bureau = await prisma.membre.update({
+    where: { email: COMPTES.bureau.email },
+    data: { alertes: ["ADHESION", "SEL_SOLDE", "SEL_SIGNALEMENT", "SEL_LITIGE", "CONTACT", "BUG"] },
+  });
   const anneeProchaine = new Date(Date.UTC(new Date().getUTCFullYear() + 1, 11, 31));
   for (const c of Object.values(COMPTES)) {
     if (!c.sel && !c.cotisation) continue;
@@ -86,17 +88,8 @@ async function creerComptes() {
       data: { membreId: m.id, montant: 1, modeReglement: "ESPECES", recueLe: new Date(), valideJusquau: anneeProchaine, saisieParId: bureau.id },
     });
     if (!c.sel) continue;
-    await prisma.inscriptionSel.create({ data: { membreId: m.id } });
-    await prisma.attestationRc.create({
-      data: {
-        membreId: m.id,
-        assureur: "Assurance de test",
-        statut: "VALIDEE",
-        valideJusquau: c.sel === "assurance-expiree" ? new Date(Date.now() - 86_400_000) : anneeProchaine,
-        verifieParId: bureau.id,
-        verifieLe: new Date(),
-      },
-    });
+    const assuranceRc = { numeroPolice: "TEST-123", compagnie: "Assurance de test", adresseCompagnie: "1 rue des Tests, 24700 Ménesplet", declareeLe: new Date().toISOString() };
+    await prisma.inscriptionSel.create({ data: { membreId: m.id, ...(c.sel === "sans-assurance" ? {} : { assuranceRc }) } });
   }
 
   // Tous les comptes ont accepté les textes en vigueur (sinon l'écran « nouvelle version » s'afficherait)

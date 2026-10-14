@@ -8,7 +8,7 @@ export default function ArticleCard({ article }) {
     <article className="carte">
       {couverture ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="vignette vignette-photo" src={couverture.url} alt={couverture.texteAlternatif} loading="lazy" />
+        <img className="vignette vignette-photo" src={couverture.url} alt={couverture.texteAlternatif ?? ""} loading="lazy" />
       ) : (
         <div className="vignette" aria-hidden="true" />
       )}

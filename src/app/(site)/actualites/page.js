@@ -4,7 +4,7 @@ import { getArticlesPublies, getCategoriesPubliees } from "@/lib/articles";
 import { getMembreConnecte, peutEditerSite, peutPublier } from "@/lib/auth";
 import { estAVenir } from "@/lib/format";
 
-export const metadata = { title: "Actualités et galerie" };
+export const metadata = { title: "Actualités" };
 
 const periodes = [
   { cle: "toutes", label: "Toutes" },
@@ -38,7 +38,7 @@ export default async function Actualites({ searchParams }) {
   return (
     <div className="conteneur section">
       <div className="coque-entete">
-        <h1>Actualités et galerie</h1>
+        <h1>Actualités</h1>
         {edition && peutPublier(membre) && (
           <span className="actions">
             <Link href="/admin/articles/nouveau" className="bouton">+ Nouvel article</Link>

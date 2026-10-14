@@ -7,6 +7,9 @@ export const TEXTES_ADHESION = ["CHARTE_NEUTRALITE", "STATUTS", "REGLEMENT_INTER
 
 export const DUREE_ACTIVATION_JOURS = 7;
 
+// On peut adhérer dès 13 ans (avec l'accord d'un responsable légal jusqu'à 18 ans)
+export const AGE_MINIMUM = 13;
+
 // Code personnel (alias) : aléatoire, non séquentiel, sans lien avec l'identité (section 6.3).
 // Alphabet sans caractères ambigus (0/O, 1/I/L).
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -29,12 +32,6 @@ export function age(dateNaissance, aujourdhui = new Date()) {
   const m = aujourdhui.getMonth() - n.getMonth();
   if (m < 0 || (m === 0 && aujourdhui.getDate() < n.getDate())) a--;
   return a;
-}
-
-// Adresses des membres du Bureau (ils valident les demandes, ADM-1).
-export async function emailsBureau() {
-  const membres = await prisma.membre.findMany({ where: { role: "BUREAU", statut: "ACTIF" }, select: { email: true } });
-  return membres.map((m) => m.email);
 }
 
 // Adresse de contact de l'association (modifiable au crayon sur la page Contacts).

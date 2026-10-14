@@ -1,15 +1,32 @@
 // Règles du SEL (Règlement intérieur du SEL, cahier des charges P6 et section 10).
 
-export const PLANCHER_BRIQUES = -120; // SEL-22, RG-8 : solde minimum, sauf dérogation
-export const ALERTE_BRIQUES = 600; // au-delà, concertation du CA, sans sanction
+// SEL-22 : alerte au CA, sans sanction ni blocage, quand un solde atteint -120 ou dépasse 600 briques
+export const SEUIL_BAS = -120;
+export const ALERTE_BRIQUES = 600;
 export const DUREE_MAX_MINUTES = 24 * 60; // garde-fou par échange
-export const VALEUR_MAX_BRIQUES = 24 * 60;
+// SEL-14 : aucun plafond de valeur par objet ; simple garde-fou contre une faute de frappe
+export const VALEUR_MAX_BRIQUES = 1_000_000;
 
 export const TEXTES_SEL = ["CHARTE_SEL", "REGLEMENT_SEL"];
 
+// SEL-19, SEL-20 : la cotisation se renouvelle avant le 31 janvier ; sans renouvellement, deux rappels sont envoyés
+// pendant 30 jours et l'accès au SEL est conservé jusqu'au 30e jour (2 mars). Renvoie la date de fin de validité
+// minimale d'une cotisation pour accéder au SEL aujourd'hui.
+export function limiteCotisationSel(maintenant = new Date()) {
+  const jour = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate()));
+  const finDeGrace = new Date(Date.UTC(jour.getUTCFullYear(), 2, 2)); // 31 janvier + 30 jours
+  return jour <= finDeGrace ? new Date(Date.UTC(jour.getUTCFullYear() - 1, 11, 31)) : jour;
+}
+
 export const libellesType = { OFFRE: "Service proposé", DEMANDE: "Service demandé" };
 export const libellesNature = { SERVICE: "Service", PRET: "Prêt d'objet", DON: "Don", OBJET: "Objet contre briques" };
-export const libellesModalite = { PRESENTIEL: "En personne", DISTANCE: "À distance possible" };
+export const libellesModalite = { PRESENTIEL: "En présentiel", DISTANCE: "À distance" };
+export const libellesStatutAnnonce = {
+  BROUILLON: { texte: "Brouillon", classe: "badge-ocre" },
+  PUBLIEE: { texte: "Publiée", classe: "" },
+  CLOTUREE: { texte: "Retirée", classe: "badge-neutre" },
+  MASQUEE: { texte: "Masquée par la modération", classe: "badge-terracotta" },
+};
 export const libellesStatutEchange = {
   PROPOSE: { texte: "Rendez-vous proposé", classe: "badge-ocre" },
   CONFIRME: { texte: "Rendez-vous confirmé", classe: "" },
@@ -40,8 +57,6 @@ export function briquesPour(nature, { dureeMinutes, valeur }) {
   return 0;
 }
 
-export const plancher = (alias) => alias.plancherBriques ?? PLANCHER_BRIQUES;
-
 // « 90 » -> « 1 h 30 »
 export function duree(minutes) {
   if (minutes == null) return "";
@@ -49,6 +64,13 @@ export function duree(minutes) {
   const m = minutes % 60;
   return h ? `${h} h${m ? ` ${String(m).padStart(2, "0")}` : ""}` : `${m} min`;
 }
+
+// Raison de la levée d'anonymat, conservée au journal
+export const RAISONS_LEVEE = {
+  presentiel: "Rencontre en personne",
+  mineur: "Un mineur est concerné",
+  autre: "Autre raison",
+};
 
 // La levée d'anonymat est faite quand les deux parties ont donné leur accord (section 6.5).
 export const anonymatLeve = (conversation) => !!(conversation.accordAuteurLe && conversation.accordInterlocuteurLe);

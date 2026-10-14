@@ -5,50 +5,10 @@ import { z } from "zod";
 import { journaliser } from "@/lib/audit";
 import { exigerAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { envoyerEmail, urlDuSite } from "@/lib/email";
-import { supprimerFichierPrive } from "@/lib/fichiers-prives";
 import { slugifier } from "@/lib/format";
-import { emailInscriptionRefusee, emailInscriptionValidee } from "@/lib/sel/modeles-email";
-import { PLANCHER_BRIQUES } from "@/lib/sel/regles";
+import { soldeSolidarite } from "@/lib/sel/solidarite";
 
-const echec = (e) => console.error("Courriel du SEL non envoyé :", e.message);
 const fin = () => revalidatePath("/admin/sel", "layout");
-
-// SEL-21 : l'administrateur vérifie l'attestation, saisit sa date de validité ; le fichier est ensuite supprimé.
-export async function validerAttestation(_etat, formData) {
-  const admin = await exigerAdmin();
-  const id = String(formData.get("id") ?? "");
-  const date = String(formData.get("valideJusquau") ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { erreur: "Indiquez la date de fin de validité lue sur l'attestation." };
-  const valideJusquau = new Date(`${date}T00:00:00Z`);
-  if (valideJusquau < new Date()) return { erreur: "Cette date est passée : l'attestation n'est plus valable." };
-
-  const attestation = await prisma.attestationRc.findUnique({ where: { id }, include: { membre: { select: { email: true, prenom: true } } } });
-  if (!attestation || attestation.statut !== "EN_ATTENTE") return { erreur: "Cette attestation a déjà été traitée." };
-  await prisma.attestationRc.update({ where: { id }, data: { statut: "VALIDEE", valideJusquau, verifieParId: admin.id, verifieLe: new Date(), fichier: null } });
-  if (attestation.fichier) await supprimerFichierPrive(attestation.fichier);
-  await journaliser({ acteurId: admin.id, action: "sel.attestation_validee", cibleType: "AttestationRc", cibleId: id });
-  await envoyerEmail({ a: attestation.membre.email, ...emailInscriptionValidee({ prenom: attestation.membre.prenom, lien: `${await urlDuSite()}/sel` }) }).catch(echec);
-  fin();
-  return { ok: "Attestation validée, fichier supprimé. Le membre a accès au SEL." };
-}
-
-export async function refuserAttestation(_etat, formData) {
-  const admin = await exigerAdmin();
-  const id = String(formData.get("id") ?? "");
-  const motif = String(formData.get("motif") ?? "").trim().slice(0, 500) || null;
-  const attestation = await prisma.attestationRc.findUnique({ where: { id }, include: { membre: { select: { email: true, prenom: true } } } });
-  if (!attestation || attestation.statut !== "EN_ATTENTE") return { erreur: "Cette attestation a déjà été traitée." };
-  await prisma.attestationRc.update({ where: { id }, data: { statut: "REFUSEE", motifRefus: motif, verifieParId: admin.id, verifieLe: new Date(), fichier: null } });
-  if (attestation.fichier) await supprimerFichierPrive(attestation.fichier);
-  await journaliser({ acteurId: admin.id, action: "sel.attestation_refusee", cibleType: "AttestationRc", cibleId: id, motif });
-  await envoyerEmail({
-    a: attestation.membre.email,
-    ...emailInscriptionRefusee({ prenom: attestation.membre.prenom, motif, lien: `${await urlDuSite()}/sel/inscription` }),
-  }).catch(echec);
-  fin();
-  return { ok: "Attestation refusée, fichier supprimé. Le membre est invité à en déposer une nouvelle." };
-}
 
 // SEL-19 : suspension (annonces masquées, échanges bloqués, solde conservé) ou réactivation
 export async function changerInscription(formData) {
@@ -61,16 +21,28 @@ export async function changerInscription(formData) {
   fin();
 }
 
-// SEL-22 : dérogation au solde minimum de -120 briques
-export async function changerPlancher(formData) {
+// SEL-25, RG-29 : un administrateur vient en aide à un membre avec les briques du compte de solidarité
+export async function aiderAvecSolidarite(_etat, formData) {
   const admin = await exigerAdmin();
-  const aliasId = String(formData.get("aliasId") ?? "");
-  const valeur = String(formData.get("plancher") ?? "").trim();
-  const plancher = valeur === "" ? null : Number(valeur);
-  if (plancher !== null && (!Number.isInteger(plancher) || plancher > 0 || plancher < -1440)) return;
-  await prisma.alias.update({ where: { id: aliasId }, data: { plancherBriques: plancher === PLANCHER_BRIQUES ? null : plancher } });
-  await journaliser({ acteurId: admin.id, action: "sel.derogation_plancher", cibleType: "Alias", cibleId: aliasId, details: { plancher } });
+  const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  const montant = Number(formData.get("montant"));
+  const motif = String(formData.get("motif") ?? "").trim().slice(0, 300);
+  if (!Number.isInteger(montant) || montant < 1) return { erreur: "Indiquez un nombre de briques (1 minimum)." };
+  if (motif.length < 5) return { erreur: "Indiquez le motif de l'aide (5 caractères minimum)." };
+  const alias = await prisma.alias.findUnique({ where: { code } });
+  if (!alias) return { erreur: "Aucun membre ne porte ce code." };
+  try {
+    await prisma.$transaction(async (tx) => {
+      if ((await soldeSolidarite(tx)) < montant) throw new Error("Le compte de solidarité n'a pas assez de briques.");
+      await tx.alias.update({ where: { id: alias.id }, data: { soldeBriques: { increment: montant } } });
+      await tx.transactionBriques.create({ data: { montant, debiteId: null, crediteId: alias.id, libelle: "Aide du compte de solidarité" } });
+    }, { isolationLevel: "Serializable" });
+  } catch (e) {
+    return { erreur: e.message.includes("solidarité") ? e.message : "L'aide n'a pas pu être enregistrée. Réessayez." };
+  }
+  await journaliser({ acteurId: admin.id, action: "sel.aide_solidarite", cibleType: "Alias", cibleId: alias.id, motif, details: { code, montant } });
   fin();
+  return { ok: `${montant} brique${montant > 1 ? "s" : ""} versée${montant > 1 ? "s" : ""} à ${code}.` };
 }
 
 // NEU-3 : masquer (avec motif, journalisé) ou réafficher une annonce
@@ -112,7 +84,7 @@ export async function trancherLitige(_etat, formData) {
       if (count !== 1) throw new Error("Ce litige a déjà été tranché.");
       const e = await tx.echange.findUnique({ where: { id }, include: { conversation: { include: { annonce: true } } } });
       if (decision === "valider" && e.briques) {
-        // Décision du CA après médiation : le plancher de -120 peut être dépassé, l'opération est journalisée
+        // Décision du CA après médiation, journalisée
         await tx.alias.update({ where: { id: e.beneficiaireId }, data: { soldeBriques: { decrement: e.briques } } });
         await tx.alias.update({ where: { id: e.prestataireId }, data: { soldeBriques: { increment: e.briques } } });
         await tx.transactionBriques.create({

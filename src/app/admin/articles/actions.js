@@ -48,9 +48,7 @@ export async function enregistrerArticle(_etat, formData) {
 
   let statut = existant?.statut ?? "BROUILLON";
   if (intention === "publier") {
-    // ACT-8 : pas de publication tant qu'une photo n'a pas l'autorisation de droit à l'image
-    const sansAccord = existant?.medias.filter((m) => !m.autorisationPublication).length ?? 0;
-    if (sansAccord) return { erreur: `${sansAccord} photo(s) sans autorisation de publication : cochez l'accord ou retirez-les.` };
+    // Photos : accord verbal avant la prise de vue, puis accord à l'inscription ; pas de case « autorisation » par photo
     statut = "PUBLIE";
   } else if (intention === "retirer") {
     statut = "RETIRE";
@@ -92,7 +90,7 @@ export async function supprimerArticle(formData) {
   redirect("/admin/articles");
 }
 
-// ACT-5, ACT-8, ACT-9 : photo redimensionnée, texte alternatif obligatoire, accord de droit à l'image.
+// ACT-5, ACT-9 : photo redimensionnée ; texte alternatif facultatif.
 export async function ajouterPhoto(_etat, formData) {
   const admin = await exigerPublication();
   const articleId = String(formData.get("articleId"));
@@ -100,7 +98,6 @@ export async function ajouterPhoto(_etat, formData) {
   const texteAlternatif = String(formData.get("texteAlternatif") ?? "").trim();
 
   if (!(fichier instanceof File) || fichier.size === 0) return { erreur: "Choisissez une image." };
-  if (texteAlternatif.length < 5) return { erreur: "Le texte alternatif est obligatoire : décrivez la photo en quelques mots." };
   const article = await prisma.article.findUnique({ where: { id: articleId }, include: { _count: { select: { medias: true } } } });
   if (!article) return { erreur: "Article introuvable." };
 
@@ -115,31 +112,15 @@ export async function ajouterPhoto(_etat, formData) {
     data: {
       url,
       articleId,
-      texteAlternatif: texteAlternatif.slice(0, 300),
+      texteAlternatif: texteAlternatif.slice(0, 300) || null,
       legende: String(formData.get("legende") ?? "").trim().slice(0, 300) || null,
       credit: String(formData.get("credit") ?? "").trim().slice(0, 100) || null,
-      autorisationPublication: formData.get("autorisation") === "on",
       ordre: article._count.medias,
     },
   });
   await journaliser({ acteurId: admin.id, action: "media.ajoute", cibleType: "Media", cibleId: media.id, details: { articleId } });
   revalidatePath("/", "layout");
   return { ok: "Photo ajoutée." };
-}
-
-export async function basculerAutorisation(formData) {
-  const admin = await exigerPublication();
-  const id = String(formData.get("id"));
-  const media = await prisma.media.findUnique({ where: { id } });
-  if (!media) return;
-  await prisma.media.update({ where: { id }, data: { autorisationPublication: !media.autorisationPublication } });
-  await journaliser({
-    acteurId: admin.id,
-    action: media.autorisationPublication ? "media.autorisation_retiree" : "media.autorisation_confirmee",
-    cibleType: "Media",
-    cibleId: id,
-  });
-  revalidatePath("/", "layout");
 }
 
 export async function supprimerPhoto(formData) {

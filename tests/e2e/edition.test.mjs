@@ -76,7 +76,7 @@ describe("édition sur place des textes (crayons ✏️)", () => {
   });
 });
 
-describe("« Nos Fabrications » modifiables depuis l'accueil", () => {
+describe("« Nos initiatives » modifiables depuis l'accueil", () => {
   let admin;
   beforeAll(async () => {
     admin = await connecte("admin");
@@ -87,7 +87,7 @@ describe("« Nos Fabrications » modifiables depuis l'accueil", () => {
     const r = await admin.soumettre("/", AJOUT, { nom: "Atelier vélo", description: "Réparer son vélo ensemble.", etat: "Ouvert", visible: "on" });
     expect(r.message ?? "").not.toMatch(/obligatoire|doit/);
     expect(texteVisible((await new Navigateur().page("/")).html)).toContain("Atelier vélo");
-    expect(texteVisible((await (await connecte("adherent")).page("/espace/fabrications")).html)).toContain("Atelier vélo");
+    expect(texteVisible((await (await connecte("adherent")).page("/espace/initiatives")).html)).toContain("Atelier vélo");
   });
 
   it("refuse un lien javascript:", async () => {

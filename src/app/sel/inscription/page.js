@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { formatDate } from "@/lib/format";
 import { exigerAdherentAJour } from "@/lib/sel/acces";
 import { TEXTES_SEL } from "@/lib/sel/regles";
 import { getTextesEnVigueur } from "@/lib/textes";
-import { FormulaireAttestation, FormulaireInscription, FormulaireTextesSel } from "./Formulaires";
+import { FormulaireAssurance, FormulaireInscription, FormulaireTextesSel } from "./Formulaires";
 
 export const metadata = { title: "Inscription au SEL" };
 
@@ -14,7 +13,6 @@ const versClient = (t) => ({ id: t.id, type: t.type, titre: t.titre, version: t.
 export default async function Inscription() {
   const etat = await exigerAdherentAJour();
   if (etat.code === "ok") redirect("/sel");
-  const demain = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   const prenom = etat.membre.prenom;
 
   if (etat.code === "inscription") {
@@ -23,10 +21,10 @@ export default async function Inscription() {
       <>
         <h1>Bienvenue dans le SEL, {prenom} !</h1>
         <p className="chapo">
-          Le SEL est un service d'échange local : on s'entraide sans argent, en briques (1 minute = 1 brique). Pour vous
-          inscrire, acceptez la Charte et le Règlement du SEL et déposez votre attestation d'assurance.
+          Le SEL est un système d'échange local : on s'entraide sans argent, en briques (1 minute = 1 brique). Pour vous
+          inscrire, acceptez la Charte et le Règlement du SEL et déclarez votre assurance responsabilité civile.
         </p>
-        <FormulaireInscription textes={textes} demain={demain} />
+        <FormulaireInscription textes={textes} />
       </>
     );
   }
@@ -37,22 +35,6 @@ export default async function Inscription() {
         <h1>Nouvelle version des textes du SEL</h1>
         <p className="chapo">La Charte ou le Règlement du SEL ont changé. Merci de lire la nouvelle version et de l'accepter pour continuer.</p>
         <FormulaireTextesSel textes={etat.textes.map(versClient)} />
-      </>
-    );
-  }
-
-  if (etat.code === "verification") {
-    return (
-      <>
-        <h1>Inscription en cours de vérification</h1>
-        <div className="carte carte-ocre">
-          <p>
-            Merci {prenom} ! Votre attestation d'assurance ({etat.attestation.assureur}, valable jusqu'au{" "}
-            {formatDate(etat.attestation.valideJusquau)}) a bien été reçue. Un membre du Bureau va la vérifier : vous
-            recevrez un e-mail dès que le SEL vous sera ouvert.
-          </p>
-          <Link href="/le-sel">En attendant, découvrir comment fonctionne le SEL →</Link>
-        </div>
       </>
     );
   }
@@ -70,19 +52,12 @@ export default async function Inscription() {
     );
   }
 
-  // Attestation refusée, absente ou expirée : en déposer une nouvelle
-  const refusee = etat.attestation?.statut === "REFUSEE";
+  // Inscription sans assurance déclarée
   return (
     <>
-      <h1>{etat.code === "attestation_expiree" ? "Votre attestation d'assurance a expiré" : "Attestation d'assurance"}</h1>
-      <div className="message-erreur" role="alert" style={{ marginBottom: "1.5rem" }}>
-        {etat.code === "attestation_expiree"
-          ? `Votre attestation était valable jusqu'au ${formatDate(etat.attestation.valideJusquau)}. Déposez la nouvelle pour retrouver l'accès au SEL : vos annonces et votre solde sont conservés.`
-          : refusee
-            ? `Votre attestation n'a pas pu être validée${etat.attestation.motifRefus ? ` : ${etat.attestation.motifRefus}` : "."} Merci d'en déposer une nouvelle.`
-            : "Déposez votre attestation d'assurance responsabilité civile pour accéder au SEL."}
-      </div>
-      <FormulaireAttestation demain={demain} />
+      <h1>Votre assurance responsabilité civile</h1>
+      <p className="chapo">Pour échanger dans le SEL, déclarez votre assurance responsabilité civile. Aucun document n'est demandé.</p>
+      <FormulaireAssurance />
     </>
   );
 }

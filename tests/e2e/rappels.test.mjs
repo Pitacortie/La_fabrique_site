@@ -72,3 +72,43 @@ describe("tâches quotidiennes : rappels de cotisation (ADH-10)", () => {
     expect(await prisma.session.findUnique({ where: { id: "session-expiree-de-test" } })).toBeNull();
   });
 });
+
+describe("tâches quotidiennes : classement et durées de conservation", () => {
+  const ilYA = (jours) => new Date(Date.now() - jours * 86_400_000);
+  const demande = (data) =>
+    prisma.demandeAdhesion.create({
+      data: {
+        email: `${Math.random().toString(36).slice(2)}@exemple.fr`, nom: "Ancien", prenom: "Test", dateNaissance: new Date("1980-01-01"),
+        adresse: "1 rue", codePostal: "24700", commune: "Ménesplet", telephone: "0600000000", droitImage: false,
+        montantPropose: 5, modeReglement: "ESPECES", consentementLeveeAnonymat: true, certifieLe: new Date(), consentementRgpdLe: new Date(),
+        ...data,
+      },
+    });
+
+  it("une demande sans cotisation depuis plus d'un mois est classée sans suite (ADH-14)", async () => {
+    const vieille = await demande({ createdAt: ilYA(40) });
+    const recente = await demande({ createdAt: ilYA(5) });
+    const r = await (await lancer()).json();
+    expect(r.demandesClassees).toBeGreaterThanOrEqual(1);
+    expect((await prisma.demandeAdhesion.findUnique({ where: { id: vieille.id } })).statut).toBe("CLASSEE_SANS_SUITE");
+    expect((await prisma.demandeAdhesion.findUnique({ where: { id: recente.id } })).statut).toBe("EN_ATTENTE");
+  });
+
+  it("une demande refusée est effacée après un an, le journal après cinq ans", async () => {
+    const refusee = await demande({ statut: "REFUSEE", decideLe: ilYA(400) });
+    const refuseeRecente = await demande({ statut: "REFUSEE", decideLe: ilYA(30) });
+    const vieilleTrace = await prisma.journalAudit.create({ data: { action: "test.ancien", cibleType: "Test", createdAt: ilYA(6 * 365) } });
+    await lancer();
+    expect(await prisma.demandeAdhesion.findUnique({ where: { id: refusee.id } })).toBeNull();
+    expect(await prisma.demandeAdhesion.findUnique({ where: { id: refuseeRecente.id } })).not.toBeNull();
+    expect(await prisma.journalAudit.findUnique({ where: { id: vieilleTrace.id } })).toBeNull();
+  });
+
+  it("un compte inactif depuis cinq ans est effacé", async () => {
+    const m = await prisma.membre.create({
+      data: { email: "inactif-cinq-ans@test.local", nom: "Inactif", prenom: "Test", statut: "ACTIF", createdAt: ilYA(6 * 365), derniereConnexion: ilYA(6 * 365) },
+    });
+    await lancer();
+    expect(await prisma.membre.findUnique({ where: { id: m.id } })).toBeNull();
+  });
+});

@@ -6,29 +6,25 @@ import { prisma } from "@/lib/db";
 
 // Sessions côté serveur : le cookie contient un jeton aléatoire, la base n'en garde que le hachage.
 export const COOKIE_SESSION = "fabrique_session";
-const HEURE = 60 * 60 * 1000;
-// « Rester connecté » : 30 jours, même après fermeture du navigateur.
-const DUREE_LONGUE_MS = 30 * 24 * HEURE;
-// Sinon : jusqu'à la fermeture du navigateur, et au plus 12 heures (ordinateur partagé, médiathèque…).
-const DUREE_COURTE_MS = 12 * HEURE;
+// ACC-4 : déconnexion automatique après plus de 5 minutes d'inactivité, ou à la fermeture de la page.
+// Chaque requête (et le signal envoyé par la page tant qu'on s'en sert) repousse l'échéance de 5 minutes.
+export const INACTIVITE_MS = 5 * 60 * 1000;
+// Garde-fou : une session ne dure jamais plus de 12 heures, même active.
+const DUREE_MAX_MS = 12 * 60 * 60 * 1000;
+// On n'écrit en base que si l'échéance a avancé d'au moins 30 secondes (évite une écriture par requête).
+const PAS_PROLONGATION_MS = 30 * 1000;
 
 const hacher = (jeton) => createHash("sha256").update(jeton).digest("hex");
 
 export const ROLES_ADMIN = ["ADMINISTRATEUR", "BUREAU"];
 
-export async function creerSession(membreId, { resterConnecte = false } = {}) {
+export async function creerSession(membreId) {
   const jeton = randomBytes(32).toString("base64url");
-  const expireLe = new Date(Date.now() + (resterConnecte ? DUREE_LONGUE_MS : DUREE_COURTE_MS));
+  const expireLe = new Date(Date.now() + INACTIVITE_MS);
   await prisma.session.create({ data: { id: hacher(jeton), membreId, expireLe } });
   const jar = await cookies();
-  jar.set(COOKIE_SESSION, jeton, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    // Sans date d'expiration, le navigateur efface le cookie à sa fermeture (cookie de session).
-    ...(resterConnecte ? { expires: expireLe } : {}),
-  });
+  // Cookie de session, sans date d'expiration : le navigateur l'efface à sa fermeture.
+  jar.set(COOKIE_SESSION, jeton, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
 }
 
 export async function supprimerSession() {
@@ -59,11 +55,17 @@ export const getMembreConnecte = cache(async function getMembreConnecte() {
     include: { membre: { include: { alias: true } } },
   });
   if (!session) return null;
-  if (session.expireLe < new Date()) {
+  const maintenant = Date.now();
+  if (session.expireLe.getTime() < maintenant || maintenant - session.createdAt.getTime() > DUREE_MAX_MS) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;
   }
   if (session.membre.statut !== "ACTIF") return null;
+  // Activité : l'échéance est repoussée de 5 minutes
+  const echeance = maintenant + INACTIVITE_MS;
+  if (echeance - session.expireLe.getTime() > PAS_PROLONGATION_MS) {
+    await prisma.session.update({ where: { id: session.id }, data: { expireLe: new Date(echeance) } }).catch(() => {});
+  }
   return session.membre;
 });
 
@@ -80,9 +82,9 @@ export async function exigerMembre(suite = "/espace") {
   return membre;
 }
 
-// ADM-18 : publier au nom de l'association est réservé aux personnes mandatées (et au Bureau).
+// ADM-18, RG-24 : seuls les administrateurs publient au nom de l'association.
 export function peutPublier(membre) {
-  return membre.role === "BUREAU" || (membre.role === "ADMINISTRATEUR" && membre.peutPublier);
+  return ROLES_ADMIN.includes(membre?.role);
 }
 
 export async function exigerPublication() {
@@ -91,12 +93,9 @@ export async function exigerPublication() {
   return membre;
 }
 
-// ADM-1, ADM-20 : valider les adhésions et enregistrer les cotisations est réservé au Bureau.
-export async function exigerBureau() {
-  const membre = await exigerAdmin();
-  if (membre.role !== "BUREAU") redirect("/admin?refus=bureau");
-  return membre;
-}
+// ADM-9, ADM-20 : tous les administrateurs ont le même niveau de droits (les membres du Bureau sont administrateurs).
+// Conservé sous ce nom pour les actions sensibles (adhésions, cotisations, textes, membres).
+export const exigerBureau = () => exigerAdmin();
 
 // Console : administrateurs et membres du Bureau uniquement.
 export async function exigerAdmin() {

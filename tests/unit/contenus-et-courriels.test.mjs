@@ -13,8 +13,8 @@ describe("blocs de texte éditables", () => {
       if (!b.url) expect(b.defaut, b.cle).toBeTruthy();
     }
   });
-  it("l'e-mail de contact par défaut utilise le vrai domaine", () => {
-    expect(BLOCS.find((b) => b.cle === "site.email").defaut).toBe("contact@lafabriquedemenesplet.fr");
+  it("l'e-mail de contact par défaut est l'adresse de l'association", () => {
+    expect(BLOCS.find((b) => b.cle === "site.email").defaut).toBe("lafabriquedemenesplet@gmail.com");
   });
 });
 

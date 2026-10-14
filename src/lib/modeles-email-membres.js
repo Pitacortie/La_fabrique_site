@@ -14,7 +14,7 @@ export function emailDemandeRecue({ prenom, montant, mode, paiement }) {
   const corps = "Nous avons bien reçu votre demande d'adhésion à La Fabrique de Ménesplet. Merci !";
   const etape = `Prochaine étape : régler votre cotisation (${montant} €, ${mode.toLowerCase()}). Aucun paiement ne se fait sur le site.`;
   const suite =
-    "Dès qu'un membre du Bureau aura reçu votre cotisation, il validera votre adhésion et vous recevrez un e-mail pour créer votre mot de passe.";
+    "Dès qu'un administrateur aura reçu votre cotisation, il validera votre adhésion et vous recevrez un e-mail pour créer votre mot de passe.";
   return {
     sujet: "Votre demande d'adhésion a bien été reçue",
     texte: enTexte(intro, corps, etape, `Comment payer :\n${paiement}`, suite),
@@ -70,29 +70,32 @@ export function emailActivation({ prenom, code, lien, dureeJours }) {
   };
 }
 
-// ADH-5, RG-6 : refus, avec le motif s'il a été indiqué
-export function emailRefus({ prenom, motif, lienContact }) {
+// ADH-5, RG-6 : refus, non motivé
+export function emailRefus({ prenom, lienContact }) {
   const intro = `Bonjour ${prenom},`;
   const corps =
-    "Nous vous remercions de l'intérêt que vous portez à La Fabrique de Ménesplet. Après examen, le Bureau n'a pas pu donner suite à votre demande d'adhésion.";
-  const raison = motif ? `Motif : ${motif}` : null;
+    "Nous vous remercions de l'intérêt que vous portez à La Fabrique de Ménesplet. Après examen, nous ne pouvons pas donner suite à votre demande d'adhésion.";
   const contact = "Pour toute question, vous pouvez nous écrire.";
   return {
     sujet: "Votre demande d'adhésion",
-    texte: enTexte(intro, corps, raison, `${contact} ${lienContact}`),
+    texte: enTexte(intro, corps, `${contact} ${lienContact}`),
     html: gabarit({
       titre: "Votre demande d'adhésion",
-      paragraphes: [intro, corps, raison, contact].filter(Boolean),
+      paragraphes: [intro, corps, contact],
       bouton: { texte: "Nous contacter", lien: lienContact },
     }),
   };
 }
 
 // ADH-10 : rappel de cotisation avant le 31 janvier
-export function emailRappelCotisation({ prenom, annee, paiement, lienEspace }) {
+export function emailRappelCotisation({ prenom, annee, paiement, lienEspace, apresEcheance = false }) {
   const intro = `Bonjour ${prenom},`;
-  const corps = `L'adhésion à La Fabrique de Ménesplet se renouvelle chaque année civile. Pensez à régler votre cotisation ${annee} (1 € minimum) avant le 31 janvier ${annee}.`;
-  const consequence = "Sans renouvellement à cette date, votre compte sera clôturé.";
+  const corps = apresEcheance
+    ? `Votre cotisation ${annee} n'a pas encore été reçue alors que l'échéance du 31 janvier est passée. Pensez à la régler (1 € minimum) dans les prochains jours.`
+    : `L'adhésion à La Fabrique de Ménesplet se renouvelle chaque année civile. Pensez à régler votre cotisation ${annee} (1 € minimum) avant le 31 janvier ${annee}.`;
+  const consequence = apresEcheance
+    ? "Sans renouvellement dans les 30 jours qui suivent le 31 janvier, l'accès au SEL est suspendu, puis la clôture du compte est soumise au CA."
+    : "Sans renouvellement, vous recevrez encore deux rappels pendant les 30 jours qui suivent, puis la clôture du compte sera soumise au CA.";
   return {
     sujet: `Renouvellement de votre adhésion ${annee}`,
     texte: enTexte(intro, corps, `Comment payer :\n${paiement}`, consequence, `Votre espace : ${lienEspace}`),

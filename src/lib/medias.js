@@ -39,3 +39,18 @@ export function cheminDepuisUrl(segments) {
   const chemin = path.resolve(DOSSIER_UPLOADS, ...segments);
   return chemin.startsWith(DOSSIER_UPLOADS + path.sep) ? chemin : null;
 }
+
+export const TAILLE_MAX_PDF = 20 * 1024 * 1024;
+
+// GAZ-1 : numéro de la gazette au format PDF. On vérifie la signature du fichier, pas seulement son type déclaré.
+export async function enregistrerPdf(fichier, sousDossier) {
+  if (fichier.type !== "application/pdf") throw new Error("Format accepté : PDF.");
+  if (fichier.size > TAILLE_MAX_PDF) throw new Error("Fichier trop lourd (20 Mo maximum).");
+  const contenu = Buffer.from(await fichier.arrayBuffer());
+  if (contenu.subarray(0, 5).toString("latin1") !== "%PDF-") throw new Error("Le fichier n'est pas un PDF valide.");
+  const nom = `${randomBytes(12).toString("hex")}.pdf`;
+  const dossier = path.join(DOSSIER_UPLOADS, sousDossier);
+  await mkdir(dossier, { recursive: true });
+  await writeFile(path.join(dossier, nom), contenu);
+  return `/medias/${sousDossier}/${nom}`;
+}

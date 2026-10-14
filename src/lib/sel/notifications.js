@@ -1,4 +1,3 @@
-import { emailsBureau } from "@/lib/adhesion";
 import { prisma } from "@/lib/db";
 import { envoyerEmail, urlDuSite } from "@/lib/email";
 import { emailEtapeEchange, emailNouveauMessage } from "./modeles-email";
@@ -24,8 +23,4 @@ export async function notifierMessage({ conversationId, destinataireId, messageI
 export async function notifierEtape({ conversationId, destinataireId }) {
   const m = await destinataire(destinataireId);
   if (m) await envoyerEmail({ a: m.email, ...emailEtapeEchange({ prenom: m.prenom, lien: `${await urlDuSite()}/sel/messages/${conversationId}` }) }).catch(echec);
-}
-
-export async function notifierBureau(modele) {
-  for (const a of await emailsBureau()) await envoyerEmail({ a, ...modele }).catch(echec);
 }

@@ -3,10 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { alerter } from "@/lib/alertes";
 import { journaliser } from "@/lib/audit";
 import { prisma } from "@/lib/db";
+import { urlDuSite } from "@/lib/email";
 import { limiter } from "@/lib/rate-limit";
 import { exigerAccesSel } from "@/lib/sel/acces";
+import { emailSignalement } from "@/lib/sel/modeles-email";
 import { VALEUR_MAX_BRIQUES, libellesMotifSignalement } from "@/lib/sel/regles";
 
 const message = (m) => ({ required_error: m, invalid_type_error: m });
@@ -23,8 +26,7 @@ const schema = z
     dureeHeures: entier("Durée invalide.").min(0).max(24).optional(),
     dureeMinutes: entier("Durée invalide.").min(0).max(59).optional(),
     valeurBriques: entier("Valeur invalide.").min(0, "La valeur ne peut pas être négative.").max(VALEUR_MAX_BRIQUES).optional(),
-    zone: z.string(message("Indiquez la commune ou le secteur.")).trim().min(2, "Indiquez la commune ou le secteur.").max(60),
-    modalite: z.enum(["PRESENTIEL", "DISTANCE"], { errorMap: () => ({ message: "Indiquez si l'échange peut se faire à distance." }) }),
+    modalite: z.enum(["PRESENTIEL", "DISTANCE"], { errorMap: () => ({ message: "Indiquez si l'échange se fait en présentiel ou à distance." }) }),
     disponibilites: z.string().trim().max(300).optional(),
     dateFin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date de fin invalide.").optional(),
     motsCles: z.string().trim().max(200).optional(),
@@ -59,7 +61,6 @@ function donneesAnnonce(d) {
     description: d.description,
     dureeEstimee: d.nature === "SERVICE" && minutes > 0 ? minutes : null,
     valeurBriques: d.nature === "OBJET" ? d.valeurBriques : null,
-    zone: d.zone,
     modalite: d.modalite,
     disponibilites: d.disponibilites ?? null,
     dateFin: d.dateFin ? new Date(`${d.dateFin}T00:00:00Z`) : null,
@@ -70,7 +71,7 @@ function donneesAnnonce(d) {
 async function verifier(formData) {
   const lu = lire(formData);
   if (!lu.success) return { erreur: lu.error.issues[0].message };
-  const risque = donneesPersonnelles(lu.data.titre, lu.data.description, lu.data.zone, lu.data.disponibilites, lu.data.motsCles);
+  const risque = donneesPersonnelles(lu.data.titre, lu.data.description, lu.data.disponibilites, lu.data.motsCles);
   if (risque) {
     return { erreur: `Votre annonce semble contenir ${risque}. Pour protéger votre anonymat, ne l'indiquez pas : vous pourrez l'échanger plus tard, après la levée d'anonymat.` };
   }
@@ -86,9 +87,11 @@ export async function publierAnnonce(_etat, formData) {
   }
   const v = await verifier(formData);
   if (v.erreur) return v;
-  const annonce = await prisma.annonce.create({ data: { ...v.donnees, auteurId: alias.id } });
+  // SEL-5 : l'annonce peut rester en brouillon le temps de valider l'offre ou la demande
+  const brouillon = formData.get("intention") === "brouillon";
+  const annonce = await prisma.annonce.create({ data: { ...v.donnees, statut: brouillon ? "BROUILLON" : "PUBLIEE", auteurId: alias.id } });
   revalidatePath("/sel", "layout");
-  redirect(`/sel/annonces/${annonce.id}?publiee=1`);
+  redirect(`/sel/annonces/${annonce.id}?${brouillon ? "brouillon" : "publiee"}=1`);
 }
 
 async function annonceDeLAuteur(id, aliasId) {
@@ -104,12 +107,14 @@ export async function modifierAnnonce(_etat, formData) {
   if (annonce.statut === "MASQUEE") return { erreur: "Cette annonce a été masquée par la modération." };
   const v = await verifier(formData);
   if (v.erreur) return v;
-  await prisma.annonce.update({ where: { id }, data: v.donnees });
+  // Un brouillon reste un brouillon, sauf si l'auteur choisit de le publier
+  const publier = annonce.statut === "BROUILLON" && formData.get("intention") === "publier";
+  await prisma.annonce.update({ where: { id }, data: { ...v.donnees, ...(publier ? { statut: "PUBLIEE", createdAt: new Date() } : {}) } });
   revalidatePath("/sel", "layout");
-  redirect(`/sel/annonces/${id}`);
+  redirect(`/sel/annonces/${id}${publier ? "?publiee=1" : ""}`);
 }
 
-// Clore (ne plus afficher) ou republier sa propre annonce
+// Publier un brouillon, clore (ne plus afficher) ou republier sa propre annonce
 export async function changerStatutAnnonce(formData) {
   const id = String(formData.get("id") ?? "");
   const { alias } = await exigerAccesSel(`/sel/annonces/${id}`);
@@ -147,5 +152,6 @@ export async function signalerSel(_etat, formData) {
 
   const s = await prisma.signalementSel.create({ data: { signaleurId: alias.id, annonceId, messageId, conversationId, motif, details } });
   await journaliser({ action: "sel.signalement", cibleType: "SignalementSel", cibleId: s.id, details: { motif } });
+  await alerter("SEL_SIGNALEMENT", emailSignalement({ motif: libellesMotifSignalement[motif], lien: `${await urlDuSite()}/admin/sel/signalements` }));
   return { ok: "Merci, la modération va examiner votre signalement." };
 }

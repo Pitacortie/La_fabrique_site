@@ -22,3 +22,13 @@ export const formatCreneau = (date) => formateur.format(new Date(date));
 
 const court = new Intl.DateTimeFormat("fr-FR", { timeZone: FUSEAU, dateStyle: "short", timeStyle: "short" });
 export const formatHorodatage = (date) => court.format(new Date(date));
+
+// Instant -> { jour: « 2026-11-14 », heure: « 14:30 » } en heure de Ménesplet (champs de formulaire, calendrier)
+const parties = new Intl.DateTimeFormat("en-CA", { timeZone: FUSEAU, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+export function partiesParis(date) {
+  const p = Object.fromEntries(parties.formatToParts(new Date(date)).map((x) => [x.type, x.value]));
+  return { jour: `${p.year}-${p.month}-${p.day}`, heure: `${p.hour}:${p.minute}` };
+}
+
+const heureSeule = new Intl.DateTimeFormat("fr-FR", { timeZone: FUSEAU, hour: "2-digit", minute: "2-digit" });
+export const formatHeure = (date) => heureSeule.format(new Date(date));

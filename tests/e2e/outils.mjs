@@ -84,9 +84,8 @@ export class Navigateur {
     return { status: r.status, location: r.headers.get("location"), html, message: message && decoder(message) };
   }
 
-  async connexion(compte, { resterConnecte = false } = {}) {
+  async connexion(compte) {
     const champs = { email: compte.email, motDePasse: compte.motDePasse };
-    if (resterConnecte) champs.resterConnecte = "on";
     const r = await this.soumettre("/connexion", 'name="motDePasse"', champs);
     if (r.status !== 303) throw new Error(`Connexion impossible pour ${compte.email} : ${r.message ?? r.status}`);
     return this;

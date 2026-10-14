@@ -10,7 +10,7 @@ export default async function Textes() {
     orderBy: [{ type: "asc" }, { enVigueurLe: "desc" }, { createdAt: "desc" }],
     include: { _count: { select: { acceptations: true } } },
   });
-  const bureau = admin.role === "BUREAU";
+  const bureau = true; // ADM-9 : tous les administrateurs ont les mêmes droits
 
   return (
     <>

@@ -36,13 +36,6 @@ describe("actualités et galerie (ACT-2 à ACT-9, ADM-21)", () => {
     expect(sansDate.message).toMatch(/date de l'activité/);
   });
 
-  it("refuse une photo sans texte alternatif (ACT-9)", async () => {
-    const donnees = await bureau.formulaire(page, "Ajouter la photo");
-    donnees.set("fichier", new File([await image()], "photo.jpg", { type: "image/jpeg" }));
-    donnees.set("texteAlternatif", "x");
-    expect((await bureau.envoyer(page, donnees)).message).toMatch(/texte alternatif est obligatoire/);
-  });
-
   it("refuse un fichier qui n'est pas une image", async () => {
     const donnees = await bureau.formulaire(page, "Ajouter la photo");
     donnees.set("fichier", new File(["<html>"], "piege.html", { type: "text/html" }));
@@ -50,21 +43,20 @@ describe("actualités et galerie (ACT-2 à ACT-9, ADM-21)", () => {
     expect((await bureau.envoyer(page, donnees)).message).toMatch(/JPEG, PNG ou WebP/);
   });
 
-  it("accepte une photo et refuse de publier tant que l'accord de droit à l'image manque (ACT-8)", async () => {
-    const donnees = await bureau.formulaire(page, "Ajouter la photo");
-    donnees.set("fichier", new File([await image()], "photo.jpg", { type: "image/jpeg" }));
-    donnees.set("texteAlternatif", "Des habitants au jardin");
-    expect((await bureau.envoyer(page, donnees)).message).toBe("Photo ajoutée.");
-    const publier = await bureau.soumettre(page, ">Publier<", { intention: "publier" });
-    expect(publier.message).toMatch(/sans autorisation de publication/);
+  it("accepte une photo, avec ou sans texte alternatif (facultatif)", async () => {
+    for (const texteAlternatif of ["Des habitants au jardin", ""]) {
+      const donnees = await bureau.formulaire(page, "Ajouter la photo");
+      donnees.set("fichier", new File([await image()], "photo.jpg", { type: "image/jpeg" }));
+      donnees.set("texteAlternatif", texteAlternatif);
+      expect((await bureau.envoyer(page, donnees)).message).toBe("Photo ajoutée.");
+    }
   });
 
-  it("publie après confirmation de l'accord : visible sur l'accueil et dans les actualités", async () => {
-    await bureau.soumettre(page, "Confirmer l&#x27;accord");
+  it("publie l'article avec ses photos : visible dans les actualités", async () => {
     const r = await bureau.soumettre(page, ">Publier<", { intention: "publier" });
     expect(r.message).toMatch(/Article publié/);
     const visiteur = new Navigateur();
-    expect(texteVisible((await visiteur.page("/")).html)).toContain(titre);
+    expect(texteVisible((await visiteur.page("/actualites")).html)).toContain(titre);
     const article = await visiteur.page("/actualites/fete-du-jardin-d-ete");
     expect(article.status).toBe(200);
     expect(texteVisible(article.html)).toContain("Deuxième");
@@ -92,19 +84,19 @@ describe("actualités et galerie (ACT-2 à ACT-9, ADM-21)", () => {
     expect(texteVisible((await new Navigateur().page("/actualites?filtre=passees")).html)).toContain(titre);
   });
 
-  it("le raccourci « Modifier cet article » n'apparaît que pour les personnes qui publient", async () => {
+  it("le raccourci « Modifier cet article » n'apparaît que pour les administrateurs", async () => {
     expect((await bureau.page("/actualites/fete-du-jardin-d-ete")).html).toContain("Modifier cet article");
-    expect((await (await connecte("admin")).page("/actualites/fete-du-jardin-d-ete")).html).not.toContain("Modifier cet article");
+    expect((await (await connecte("adherent")).page("/actualites/fete-du-jardin-d-ete")).html).not.toContain("Modifier cet article");
   });
 
-  it("un administrateur non mandaté ne peut pas publier, même en rejouant la requête (ADM-18)", async () => {
-    const admin = await connecte("admin");
+  it("un adhérent ne peut pas publier, même en rejouant la requête (ADM-18)", async () => {
+    const admin = await connecte("adherent");
     const donnees = await bureau.formulaire("/admin/articles/nouveau", "Créer le brouillon");
     donnees.set("titre", "Article pirate");
     donnees.set("contenu", "x");
     donnees.set("dateActivite", "2030-01-01");
     const r = await admin.envoyer("/admin/articles/nouveau", donnees);
-    expect(r.location).toBe("/admin?refus=publication");
+    expect(r.location).toBe("/espace");
     expect(await prisma.article.findFirst({ where: { titre: "Article pirate" } })).toBeNull();
   });
 

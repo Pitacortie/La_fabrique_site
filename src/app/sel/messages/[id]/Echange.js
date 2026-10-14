@@ -9,7 +9,7 @@ import {
 import { FormulaireEtape } from "@/app/sel/Formulaires";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import { formatCreneau } from "@/lib/heure-paris";
-import { duree, libellesStatutEchange, plancher } from "@/lib/sel/regles";
+import { duree, libellesStatutEchange } from "@/lib/sel/regles";
 import { ChampDate, ChampHeure } from "@/components/ChampsDate";
 
 const Cache = ({ conversationId, echangeId }) => (
@@ -53,7 +53,9 @@ export default function Echange({ conversation, echange, suis, autreCode, peutPr
       <section className="sel-etape sel-etape-active">
         <h2>Réserver un rendez-vous</h2>
         {!peutProposer ? (
-          <p className="encart">Pour un rendez-vous en personne, révélez d'abord vos identités l'un à l'autre (ci-dessus).</p>
+          <p className="encart">
+            Pour un rendez-vous en personne, ou dès qu'un mineur est concerné, révélez d'abord vos identités l'un à l'autre (ci-dessus).
+          </p>
         ) : (
           <FormulaireEtape action={proposerRendezVous} className="formulaire sel-etape-formulaire">
             <Cache conversationId={c} />
@@ -172,7 +174,7 @@ export default function Echange({ conversation, echange, suis, autreCode, peutPr
             </p>
             {echange.briques > 0 && (
               <p className="meta">
-                Votre solde passera de {alias.soldeBriques} à {alias.soldeBriques - echange.briques} briques (minimum autorisé : {plancher(alias)}).
+                Votre solde passera de {alias.soldeBriques} à {alias.soldeBriques - echange.briques} briques.
               </p>
             )}
             <FormulaireEtape action={confirmerEchange} className="formulaire sel-etape-formulaire">

@@ -14,7 +14,7 @@ export default async function Articles() {
   return (
     <>
       <div className="coque-entete">
-        <h1>Actualités et galerie</h1>
+        <h1>Actualités</h1>
         <Link href="/admin/articles/nouveau" className="bouton">Nouvel article</Link>
       </div>
       <p className="chapo">Articles sur les activités passées et à venir. Seuls les articles publiés apparaissent sur le site.</p>

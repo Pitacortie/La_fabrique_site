@@ -150,7 +150,6 @@ model Membre {
   statut       StatutMembre    @default(EN_ATTENTE_ACTIVATION)
   motifStatut  String?
   role         Role            @default(ADHERENT)
-  peutPublier  Boolean         @default(false) // mandaté pour publier (ADM-18)
 
   alias Alias?
 
@@ -163,13 +162,16 @@ model Membre {
   sessions              Session[]
   jetons                Jeton[]
   articles              Article[]
+  evenements            Evenement[]
+  numerosGazette        NumeroGazette[]
   journal               JournalAudit[]
   contenusModifies      ContenuEditorial[]
   signalements          SignalementBug[]
   messagesRepondus      MessageContact[]
   inscriptionSel        InscriptionSel?
-  attestationsRc        AttestationRc[]    @relation("AttestationsDuMembre")
-  attestationsVerifiees AttestationRc[]    @relation("AttestationsVerifiees")
+
+  // Alertes e-mail reçues par un membre du Bureau ou un administrateur (voir src/lib/alertes.js). Aucune par défaut.
+  alertes String[] @default([])
 
   // ADH-10 : date du dernier rappel de cotisation envoyé (évite les relances quotidiennes)
   dernierRappelCotisation DateTime?
@@ -192,8 +194,6 @@ model Alias {
 
   // SEL : solde en briques (1 minute = 1 brique), mis à jour avec chaque transaction (SEL-9, RG-8)
   soldeBriques    Int  @default(0)
-  // Dérogation accordée par un administrateur : solde minimum autorisé (sinon -120, SEL-22)
-  plancherBriques Int?
 
   annonces             Annonce[]
   conversationsAuteur  Conversation[]       @relation("ConversationAuteur")
@@ -330,8 +330,7 @@ model Media {
   url                     String
   legende                 String?
   credit                  String?
-  texteAlternatif         String // obligatoire (ACT-9)
-  autorisationPublication Boolean  @default(false) // droit à l'image (ACT-8)
+  texteAlternatif         String? // facultatif
   article                 Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
   articleId               String?
   ordre                   Int      @default(0)
@@ -424,12 +423,6 @@ enum StatutInscriptionSel {
   SUSPENDUE
 }
 
-enum StatutAttestation {
-  EN_ATTENTE
-  VALIDEE
-  REFUSEE
-}
-
 enum TypeAnnonce {
   OFFRE
   DEMANDE
@@ -448,6 +441,7 @@ enum Modalite {
 }
 
 enum StatutAnnonce {
+  BROUILLON // pas encore publiée (SEL-5)
   PUBLIEE
   CLOTUREE // retirée par son auteur
   MASQUEE // masquée par la modération (NEU-3)
@@ -487,29 +481,11 @@ model InscriptionSel {
   membreId        String               @unique
   statut          StatutInscriptionSel @default(ACTIVE)
   motifSuspension String?
+  // SEL-2, SEL-21 : assurance responsabilité civile déclarative (aucun fichier, aucune vérification) :
+  // { numeroPolice, compagnie, adresseCompagnie, declareeLe }. Vide : déclaration à faire avant d'échanger.
+  assuranceRc     Json?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-}
-
-// SEL-21 : attestation d'assurance RC, vérifiée par un administrateur qui saisit sa date de validité ;
-// le fichier est ensuite supprimé, seuls la date et le nom du vérificateur sont conservés.
-model AttestationRc {
-  id            String            @id @default(cuid())
-  membre        Membre            @relation("AttestationsDuMembre", fields: [membreId], references: [id], onDelete: Cascade)
-  membreId      String
-  assureur      String
-  valideJusquau DateTime          @db.Date
-  fichier       String? // chemin du fichier dans le stockage privé, effacé après vérification
-  fichierType   String?
-  statut        StatutAttestation @default(EN_ATTENTE)
-  motifRefus    String?
-  verifiePar    Membre?           @relation("AttestationsVerifiees", fields: [verifieParId], references: [id], onDelete: SetNull)
-  verifieParId  String?
-  verifieLe     DateTime?
-  createdAt     DateTime          @default(now())
-
-  @@index([statut, createdAt])
-  @@index([membreId])
 }
 
 // Rubriques du catalogue des échanges (annexe B), modifiables par un administrateur (SEL-11, ADM-10)
@@ -535,7 +511,6 @@ model Annonce {
   description     String           @db.Text
   dureeEstimee    Int? // minutes (service)
   valeurBriques   Int? // objet échangé contre des briques
-  zone            String // commune ou secteur, jamais une adresse (section 6.6)
   modalite        Modalite
   disponibilites  String?
   dateFin         DateTime?        @db.Date
@@ -661,4 +636,41 @@ model SignalementSel {
   createdAt      DateTime             @default(now())
 
   @@index([statut, createdAt])
+}
+
+// =====================================================================
+// Agenda (P10) et gazette (P11)
+// =====================================================================
+
+// AGE-1 à AGE-5 : événements et rencontres à venir, tenus à jour par un administrateur (pas d'inscription en ligne)
+model Evenement {
+  id          String    @id @default(cuid())
+  titre       String
+  debut       DateTime
+  fin         DateTime?
+  lieu        String
+  description String?   @db.Text
+  auteur      Membre?   @relation(fields: [auteurId], references: [id], onDelete: SetNull)
+  auteurId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([debut])
+}
+
+// GAZ-1 à GAZ-5 : numéros de « La gazette de la Fabrique », du plus récent au plus ancien
+model NumeroGazette {
+  id        String   @id @default(cuid())
+  titre     String
+  numero    Int?
+  parution  DateTime @db.Date
+  resume    String?  @db.Text
+  fichier   String? // PDF du numéro (URL publique /medias/…)
+  publie    Boolean  @default(true)
+  auteur    Membre?  @relation(fields: [auteurId], references: [id], onDelete: SetNull)
+  auteurId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publie, parution])
 }

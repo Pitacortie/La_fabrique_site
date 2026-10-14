@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { age, finAnneeCivile } from "@/lib/adhesion";
 import { anneeARenouveler } from "@/lib/taches";
+import { limiteCotisationSel } from "@/lib/sel/regles";
 import { emailActivation, emailAccuseContact, emailDemandeRecue, emailRefus } from "@/lib/modeles-email-membres";
 
 describe("âge (bloc « mineurs » du bulletin, ADH-16)", () => {
@@ -22,9 +23,21 @@ describe("année civile de cotisation (règlement intérieur, art. 3)", () => {
     ["2026-12-01", 2027],
     ["2026-12-31", 2027],
     ["2027-01-15", 2027],
-    ["2027-02-01", null],
+    ["2027-02-15", 2027],
+    ["2027-03-05", null],
   ])("période de renouvellement le %s → %s", (date, annee) => {
     expect(anneeARenouveler(new Date(`${date}T12:00:00`))).toBe(annee);
+  });
+});
+
+describe("accès au SEL pendant les 30 jours qui suivent le 31 janvier (SEL-19, SEL-20)", () => {
+  it.each([
+    ["2027-01-10", "2026-12-31"],
+    ["2027-03-02", "2026-12-31"],
+    ["2027-03-03", "2027-03-03"],
+    ["2027-10-14", "2027-10-14"],
+  ])("le %s, une cotisation valable jusqu'au %s suffit", (jour, limite) => {
+    expect(limiteCotisationSel(new Date(`${jour}T12:00:00Z`)).toISOString().slice(0, 10)).toBe(limite);
   });
 });
 
@@ -41,9 +54,8 @@ describe("courriels du parcours d'adhésion", () => {
     expect(m.texte).toContain("7 jours");
     expect(m.html).toContain('href="https://x/activer/j"');
   });
-  it("le refus n'affiche « Motif » que s'il y en a un", () => {
-    expect(emailRefus({ prenom: "A", motif: "Raison", lienContact: "https://x/contact" }).texte).toContain("Motif : Raison");
-    expect(emailRefus({ prenom: "A", motif: null, lienContact: "https://x/contact" }).texte).not.toContain("Motif");
+  it("le refus n'est pas motivé", () => {
+    expect(emailRefus({ prenom: "A", motif: "Raison", lienContact: "https://x/contact" }).texte).not.toContain("Raison");
   });
   it("l'accusé de réception ne reprend aucun texte fourni par l'expéditeur, sauf son nom (échappé en HTML)", () => {
     const m = emailAccuseContact({ nom: "<b>Jeanne</b>" });

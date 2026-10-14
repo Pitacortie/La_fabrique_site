@@ -109,7 +109,7 @@ export default function FormulaireAdhesion({ textes = {} }) {
         <h3>Prochaine étape : régler votre cotisation</h3>
         <TexteSimple texte={etat.paiement} />
         <p>
-          Dès qu'un membre du Bureau aura reçu votre cotisation, il validera votre adhésion et vous recevrez un e-mail
+          Dès qu'un administrateur aura reçu votre cotisation, il validera votre adhésion et vous recevrez un e-mail
           pour créer votre mot de passe.
         </p>
       </div>
@@ -233,7 +233,7 @@ export default function FormulaireAdhesion({ textes = {} }) {
           <legend>Cotisation</legend>
           <p>
             Adhésion annuelle : <strong>1 € minimum</strong> par personne et par année civile. Le règlement se fait hors
-            du site ; un membre du Bureau enregistre la cotisation reçue.
+            du site ; un administrateur enregistre la cotisation reçue.
           </p>
           <div className="champs">
             <div className="champ">
