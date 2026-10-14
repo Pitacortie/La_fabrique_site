@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
 import TexteSimple from "@/components/TexteSimple";
-import { libellesModeReglement } from "@/lib/site";
+import { libellesModeReglement, modesReglementProposes } from "@/lib/site";
 import { deposerDemande } from "./actions";
 import { ChampDate } from "@/components/ChampsDate";
 
@@ -244,7 +244,7 @@ export default function FormulaireAdhesion({ textes = {} }) {
               <label htmlFor="modeReglement">Mode de règlement <span className="obligatoire">*</span></label>
               <select id="modeReglement" name="modeReglement" required defaultValue="">
                 <option value="" disabled>Choisir…</option>
-                {Object.entries(libellesModeReglement).map(([valeur, libelle]) => (
+                {Object.entries(modesReglementProposes).map(([valeur, libelle]) => (
                   <option key={valeur} value={valeur}>{libelle}</option>
                 ))}
               </select>

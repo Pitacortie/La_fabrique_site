@@ -10,14 +10,14 @@ import { exigerBureau } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { envoyerEmail, urlDuSite } from "@/lib/email";
 import { emailRefus } from "@/lib/modeles-email-membres";
-import { libellesCategorie, libellesModeReglement } from "@/lib/site";
+import { libellesCategorie, modesReglementProposes } from "@/lib/site";
 
 const date = (message) => z.string({ required_error: message }).regex(/^\d{4}-\d{2}-\d{2}$/, message).transform((v) => new Date(`${v}T00:00:00Z`));
 
 const schemaValidation = z
   .object({
     montant: z.coerce.number({ invalid_type_error: "Montant invalide." }).min(1, "La cotisation est d'un euro minimum.").max(10000),
-    modeReglement: z.enum(Object.keys(libellesModeReglement), { errorMap: () => ({ message: "Choisissez le mode de règlement." }) }),
+    modeReglement: z.enum(Object.keys(modesReglementProposes), { errorMap: () => ({ message: "Choisissez le mode de règlement." }) }),
     recueLe: date("Indiquez la date de réception de la cotisation."),
     valideJusquau: date("Indiquez la date de fin de validité."),
     categorie: z.enum(Object.keys(libellesCategorie), { errorMap: () => ({ message: "Choisissez la catégorie de membre." }) }),

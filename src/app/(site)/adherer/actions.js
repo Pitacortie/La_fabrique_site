@@ -8,7 +8,7 @@ import { envoyerEmail, urlDuSite } from "@/lib/email";
 import { emailDejaMembre, emailDemandeRecue, emailNouvelleDemande } from "@/lib/modeles-email-membres";
 import { limiter } from "@/lib/rate-limit";
 import { ipClient } from "@/lib/requete";
-import { libellesModeReglement } from "@/lib/site";
+import { libellesModeReglement, modesReglementProposes } from "@/lib/site";
 import { getTextesEnVigueur } from "@/lib/textes";
 
 // Champ absent = message en français (et non le « Required » par défaut de zod)
@@ -37,7 +37,7 @@ const schema = z.object({
   responsableTelephone: z.string().trim().max(20).optional(),
   droitImage: z.enum(["oui", "non"], { errorMap: () => ({ message: "Choisissez une option pour le droit à l'image." }) }),
   montant: z.coerce.number({ required_error: "Indiquez le montant de votre cotisation.", invalid_type_error: "Montant invalide." }).min(1, "La cotisation est d'un euro minimum.").max(10000),
-  modeReglement: z.enum(Object.keys(libellesModeReglement), { errorMap: () => ({ message: "Choisissez un mode de règlement." }) }),
+  modeReglement: z.enum(Object.keys(modesReglementProposes), { errorMap: () => ({ message: "Choisissez un mode de règlement." }) }),
   accepteCharte: coche("Vous devez accepter la charte de neutralité et de participation."),
   accepteStatuts: coche("Vous devez accepter les statuts."),
   accepteReglement: coche("Vous devez accepter le règlement intérieur."),

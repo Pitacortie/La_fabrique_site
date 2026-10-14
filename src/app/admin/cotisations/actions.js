@@ -5,7 +5,7 @@ import { z } from "zod";
 import { journaliser } from "@/lib/audit";
 import { exigerBureau } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { libellesModeReglement } from "@/lib/site";
+import { modesReglementProposes } from "@/lib/site";
 import { anneeARenouveler, envoyerRappelsCotisation } from "@/lib/taches";
 
 const date = (message) => z.string({ required_error: message }).regex(/^\d{4}-\d{2}-\d{2}$/, message).transform((v) => new Date(`${v}T00:00:00Z`));
@@ -14,7 +14,7 @@ const schema = z
   .object({
     membreId: z.string({ required_error: "Choisissez le membre." }).min(1, "Choisissez le membre."),
     montant: z.coerce.number({ invalid_type_error: "Montant invalide." }).min(1, "La cotisation est d'un euro minimum.").max(10000),
-    modeReglement: z.enum(Object.keys(libellesModeReglement), { errorMap: () => ({ message: "Choisissez le mode de règlement." }) }),
+    modeReglement: z.enum(Object.keys(modesReglementProposes), { errorMap: () => ({ message: "Choisissez le mode de règlement." }) }),
     recueLe: date("Indiquez la date de réception."),
     valideJusquau: date("Indiquez la date de fin de validité."),
   })

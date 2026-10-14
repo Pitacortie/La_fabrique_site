@@ -66,6 +66,8 @@ export async function diagnostiquerEmail(a) {
 // Adresse publique du site pour les liens des courriels : APP_URL, sinon l'adresse de la requête en cours.
 export async function urlDuSite() {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  // Fournie automatiquement par Render (ex. https://la-fabrique.onrender.com)
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL.replace(/\/$/, "");
   const h = await headers();
   const hote = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const protocole = h.get("x-forwarded-proto") ?? (hote.startsWith("localhost") ? "http" : "https");

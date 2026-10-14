@@ -54,7 +54,6 @@ export const BLOCS = [
       "Par chèque : à l'ordre de « La Fabrique de Ménesplet », à remettre à un membre du Bureau ou à envoyer au siège (12 rue Simone Veil, lieu Laser, 24700 Ménesplet).",
       "Par virement : IBAN à compléter.",
       "En espèces : auprès d'un membre du Bureau.",
-      "Par Wero ou Paylib : numéro à compléter.",
     ].join("\n"),
   },
   { cle: "site.telephone", page: "Coordonnées", libelle: "Téléphone", defaut: "À compléter", ligne: true },

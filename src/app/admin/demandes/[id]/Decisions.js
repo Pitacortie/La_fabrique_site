@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
-import { libellesCategorie, libellesModeReglement } from "@/lib/site";
+import { libellesCategorie, modesReglementProposes } from "@/lib/site";
 import { classerDemande, refuserDemande, renvoyerActivation, validerDemande } from "../actions";
 import { ChampDate } from "@/components/ChampsDate";
 
@@ -24,7 +24,7 @@ export function FormulaireValidation({ demande, aujourdhui, finAnnee }) {
           <div className="champ">
             <label htmlFor="modeReglement">Mode de règlement</label>
             <select id="modeReglement" name="modeReglement" required defaultValue={demande.modeReglement}>
-              {Object.entries(libellesModeReglement).map(([v, l]) => (
+              {Object.entries(modesReglementProposes).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
             </select>

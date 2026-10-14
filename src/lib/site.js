@@ -24,8 +24,13 @@ export const libellesModeReglement = {
   CHEQUE: "Chèque",
   ESPECES: "Espèces",
   VIREMENT: "Virement",
-  WERO_PAYLIB: "Wero / Paylib",
+  WERO_PAYLIB: "Wero / Paylib", // plus proposé ; conservé pour l'affichage des anciennes saisies
 };
+
+// Modes de règlement proposés dans les formulaires
+export const modesReglementProposes = Object.fromEntries(
+  Object.entries(libellesModeReglement).filter(([v]) => v !== "WERO_PAYLIB"),
+);
 
 export const libellesStatutArticle = {
   BROUILLON: { texte: "Brouillon", classe: "badge-neutre" },

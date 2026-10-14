@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
 import Retour from "@/components/Retour";
-import { libellesModeReglement } from "@/lib/site";
+import { modesReglementProposes } from "@/lib/site";
 import { enregistrerCotisation, lancerRappels } from "./actions";
 import { ChampDate } from "@/components/ChampsDate";
 
@@ -32,7 +32,7 @@ export function FormulaireCotisation({ membres, aujourdhui, finAnnee }) {
             <label htmlFor="modeReglement">Mode de règlement</label>
             <select id="modeReglement" name="modeReglement" required defaultValue="">
               <option value="" disabled>Choisir…</option>
-              {Object.entries(libellesModeReglement).map(([v, l]) => (
+              {Object.entries(modesReglementProposes).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
             </select>
