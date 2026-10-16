@@ -74,8 +74,8 @@ export default function BoutonSignalement({ connecte }) {
 
   return (
     <>
-      <button type="button" className="bouton-bug" onClick={ouvrir} aria-haspopup="dialog">
-        <span aria-hidden="true">🐞</span> Signaler un bug
+      <button type="button" className="bouton-bug" onClick={ouvrir} aria-haspopup="dialog" aria-label="Signaler un bug">
+        <span aria-hidden="true">🐞</span> <span className="bouton-bug-texte">Signaler un bug</span>
       </button>
       <dialog ref={dialogRef} className="dialogue-bug" aria-labelledby="titre-bug">
         <h2 id="titre-bug">Signaler un bug</h2>

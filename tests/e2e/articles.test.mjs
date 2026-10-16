@@ -84,9 +84,12 @@ describe("actualités et galerie (ACT-2 à ACT-9, ADM-21)", () => {
     expect(texteVisible((await new Navigateur().page("/actualites?filtre=passees")).html)).toContain(titre);
   });
 
-  it("le raccourci « Modifier cet article » n'apparaît que pour les administrateurs", async () => {
-    expect((await bureau.page("/actualites/fete-du-jardin-d-ete")).html).toContain("Modifier cet article");
-    expect((await (await connecte("adherent")).page("/actualites/fete-du-jardin-d-ete")).html).not.toContain("Modifier cet article");
+  it("le crayon « Modifier / Retirer du site » n'apparaît que pour les administrateurs", async () => {
+    for (const chemin of ["/actualites", "/actualites/fete-du-jardin-d-ete"]) {
+      expect((await bureau.page(chemin)).html, chemin).toContain("✏️ Modifier");
+      expect((await bureau.page(chemin)).html, chemin).toContain("Retirer du site");
+      expect((await (await connecte("adherent")).page(chemin)).html, chemin).not.toContain("✏️ Modifier");
+    }
   });
 
   it("un adhérent ne peut pas publier, même en rejouant la requête (ADM-18)", async () => {
@@ -98,6 +101,16 @@ describe("actualités et galerie (ACT-2 à ACT-9, ADM-21)", () => {
     const r = await admin.envoyer("/admin/articles/nouveau", donnees);
     expect(r.location).toBe("/espace");
     expect(await prisma.article.findFirst({ where: { titre: "Article pirate" } })).toBeNull();
+  });
+
+  it("« Retirer du site » depuis la page publique retire l'actualité", async () => {
+    const autre = await prisma.article.create({
+      data: { slug: "a-retirer-depuis-le-site", titre: "Actualité à retirer", contenu: "Texte.", categorie: "Atelier", statut: "PUBLIE", publieLe: new Date(), auteurId: (await prisma.membre.findFirst({ where: { role: "BUREAU" } })).id },
+    });
+    const r = await bureau.soumettre("/actualites/a-retirer-depuis-le-site", "Retirer du site");
+    expect(r.location).toBe("/actualites?retire=1");
+    expect((await prisma.article.findUnique({ where: { id: autre.id } })).statut).toBe("RETIRE");
+    expect((await new Navigateur().page("/actualites/a-retirer-depuis-le-site")).status).toBe(404);
   });
 
   it("retirer l'article le rend invisible (ACT-6), et l'action est journalisée", async () => {

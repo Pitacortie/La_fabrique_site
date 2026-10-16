@@ -226,7 +226,8 @@ textarea { min-height: 8rem; resize: vertical; }
 
 /* ---------- Espace adhérent et console ---------- */
 
-.coque { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
+.coque { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
+.coque-burger { display: none; }
 .coque-menu { background: var(--texte); color: #fff; padding: 1.5rem 1rem; }
 .coque-menu .marque { color: #fff; margin-bottom: 1.5rem; font-size: 1.1rem; }
 .coque-menu .marque small { color: var(--ocre); }
@@ -240,9 +241,19 @@ textarea { min-height: 8rem; resize: vertical; }
 .coque-entete h1 { font-size: 2rem; text-transform: none; margin: 0; }
 
 @media (max-width: 48rem) {
-  .coque { grid-template-columns: 1fr; min-height: 0; }
-  .coque-menu nav { grid-auto-flow: column; overflow-x: auto; }
-  .coque-menu .groupe { display: none; }
+  .coque { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .coque-menu { position: sticky; top: 0; z-index: 50; padding: 0.55rem 1rem; padding-top: calc(0.55rem + env(safe-area-inset-top, 0px)); }
+  .coque-barre { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .coque-menu .marque { margin-bottom: 0; }
+  .coque-burger {
+    display: block; font: inherit; font-weight: 600; cursor: pointer; color: #fff; background: none;
+    border: 1px solid rgb(255 255 255 / 0.4); border-radius: 8px; padding: 0.5rem 1rem;
+  }
+  .coque-tiroir { display: none; }
+  .coque-tiroir.ouvert { display: block; max-height: calc(100dvh - 4.5rem); overflow-y: auto; padding: 0.5rem 0 1rem; }
+  .coque-tiroir nav a { padding: 0.75rem; font-size: 1rem; }
+  .coque-contenu { padding: 1.25rem 1rem 3rem; }
+  .coque-entete h1 { font-size: 1.7rem; }
 }
 
 .stats { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin-bottom: 2rem; }
@@ -268,7 +279,6 @@ td.vide { text-align: center; color: var(--texte-doux); padding: 2.5rem 1rem; wh
 .coque-sortir { font: inherit; font-size: 0.93rem; width: 100%; text-align: left; cursor: pointer;
   background: none; border: 1px solid rgb(255 255 255 / 0.25); color: #fff; border-radius: 8px; padding: 0.5rem 0.75rem; }
 .coque-sortir:hover { background: var(--terracotta); border-color: var(--terracotta); }
-@media (max-width: 48rem) { .coque-session { display: none; } }
 
 /* ---------- Console : édition ---------- */
 
@@ -545,3 +555,81 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 
 .sel-citation { margin: 1.5rem 0 0; padding: 1rem 1.25rem; border-left: 4px solid var(--terracotta); background: var(--surface);
   font-style: italic; font-weight: 600; border-radius: 0 var(--rayon) var(--rayon) 0; }
+
+.outils-article { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--bleu); }
+.outils-article .bouton { padding: 0.45rem 0.9rem; font-size: 0.9rem; min-height: 0; }
+.outils-article .bouton-retirer { color: var(--erreur); border-color: var(--erreur); }
+.outils-article .bouton-retirer:hover { background: var(--erreur); color: #fff; }
+
+/* ===================== Téléphone ===================== */
+
+/* Navigation du SEL en bas de l'écran (masquée sur grand écran) */
+.sel-barre-bas { display: none; }
+
+@media (max-width: 56rem) {
+  .sel-ouvert { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  .sel-barre-bas {
+    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--surface); border-top: 1px solid var(--bordure); box-shadow: 0 -4px 16px rgb(43 29 20 / 0.08);
+    padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  }
+  .sel-barre-bas a {
+    position: relative; display: grid; justify-items: center; gap: 0.1rem; padding: 0.3rem 0.1rem;
+    color: var(--texte-doux); text-decoration: none; font-size: 0.7rem; font-weight: 600; border-radius: 8px;
+  }
+  .sel-barre-bas a[aria-current="page"] { color: var(--bleu-fonce); background: #eef4f7; }
+  .sel-barre-bas-principal svg { width: 2.6rem; height: 2.6rem; padding: 0.45rem; margin-top: -1.1rem; border-radius: 50%; background: var(--terracotta); color: #fff; box-shadow: var(--ombre); }
+  .sel-barre-bas a.sel-barre-bas-principal[aria-current="page"] { background: none; }
+  .sel-barre-bas-pastille { position: absolute; top: 0; left: calc(50% + 0.4rem); }
+  /* Le bouton « Publier » de l'en-tête fait doublon avec la barre du bas */
+  .sel-onglets-barre .bouton { display: none; }
+  .sel-onglets { width: 100%; }
+  .sel-onglet { flex: 1; text-align: center; }
+  .sel-ouvert .bouton-bug, .sel-ouvert .garde-session { bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px)); }
+  .sel-messages { max-height: 55dvh; }
+}
+
+/* Recherche du SEL : rien ne dépasse de l'écran */
+.sel-recherche { grid-template-columns: minmax(0, 1fr); }
+.sel-recherche > * { min-width: 0; }
+.sel-recherche-principale input { min-width: 0; flex: 1; }
+.sel-recherche-principale .bouton { flex: none; }
+.sel-filtres select, .sel-filtres input { min-width: 0; max-width: 100%; }
+
+@media (max-width: 48rem) {
+  .section { padding-block: 2rem; }
+  .heros { padding-block: 2.5rem 2rem; }
+  .entete-barre { min-height: 4rem; gap: 1rem; }
+  .burger { padding: 0.5rem 1rem; font-weight: 600; }
+  .nav { max-height: calc(100dvh - 4rem); overflow-y: auto; box-shadow: 0 12px 24px rgb(43 29 20 / 0.12); }
+  .nav a { padding: 0.8rem 0.7rem; font-size: 1.05rem; }
+  .nav a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--terracotta); padding-left: 1rem; }
+
+  /* Listes « libellé : valeur » : l'une sous l'autre */
+  .liste-def { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+  .liste-def dd { margin-bottom: 0.6rem; overflow-wrap: anywhere; }
+
+  /* 16 px minimum : sinon l'iPhone zoome sur le champ */
+  input, select, textarea, .sel-signalement select, .sel-signalement input { font-size: 16px; }
+
+  /* Boutons pleine largeur dans les formulaires, plus faciles à toucher */
+  .formulaire > .actions .bouton { flex: 1 1 100%; }
+  .bouton { min-height: 2.9rem; }
+
+  /* Signaler un bug : une simple pastille */
+  .bouton-bug { width: 2.75rem; height: 2.75rem; padding: 0; right: 0.75rem; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); font-size: 1.1rem; opacity: 0.9; }
+  .bouton-bug-texte { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .garde-session { left: 0.75rem; right: 0.75rem; transform: none; max-width: none; }
+  .barre-edition { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* Agenda : le calendrier tient dans l'écran, les événements sont des points (le détail est dans la liste) */
+  .agenda-calendrier { min-width: 0; }
+  .agenda-calendrier th { padding: 0.4rem 0; text-align: center; font-size: 0.75rem; }
+  .agenda-calendrier td { height: 3.2rem; padding: 0.25rem; text-align: center; }
+  .agenda-pastille { display: inline-block; width: 0.55rem; height: 0.55rem; padding: 0; margin: 0.15rem; border-radius: 50%; font-size: 0; overflow: hidden; vertical-align: middle; }
+  .tableau-conteneur:has(.agenda-calendrier) { overflow-x: visible; }
+
+  .sel-message { max-width: 92%; }
+  .sel-fiche h1 { font-size: 1.8rem; }
+}

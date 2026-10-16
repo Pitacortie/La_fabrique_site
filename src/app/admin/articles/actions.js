@@ -77,6 +77,16 @@ export async function enregistrerArticle(_etat, formData) {
   };
 }
 
+// Retrait rapide depuis la page publique (crayon ✏️ sur les actualités)
+export async function retirerArticle(formData) {
+  const admin = await exigerPublication();
+  const id = String(formData.get("id") ?? "");
+  const { count } = await prisma.article.updateMany({ where: { id, statut: "PUBLIE" }, data: { statut: "RETIRE" } });
+  if (count) await journaliser({ acteurId: admin.id, action: "article.retire", cibleType: "Article", cibleId: id });
+  revalidatePath("/", "layout");
+  redirect("/actualites?retire=1");
+}
+
 export async function supprimerArticle(formData) {
   const admin = await exigerPublication();
   const id = String(formData.get("id"));

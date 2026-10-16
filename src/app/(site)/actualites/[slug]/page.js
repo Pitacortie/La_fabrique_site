@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Galerie from "@/components/Galerie";
+import OutilsArticle from "@/components/OutilsArticle";
 import TexteSimple from "@/components/TexteSimple";
 import { getArticlePublie } from "@/lib/articles";
 import { getMembreConnecte, peutEditerSite, peutPublier } from "@/lib/auth";
@@ -23,13 +24,7 @@ export default async function Article({ params }) {
     <article className="conteneur section">
       <p><Link href="/actualites">← Actualités</Link></p>
       <h1>{article.titre}</h1>
-      {edition && (
-        <p>
-          <Link href={`/admin/articles/${article.id}`} className="bouton bouton-secondaire crayon-lien">
-            ✏️ Modifier cet article et ses photos
-          </Link>
-        </p>
-      )}
+      {edition && <OutilsArticle id={article.id} />}
       <p className="meta">
         <span className={`badge ${aVenir ? "badge-ocre" : "badge-neutre"}`}>{aVenir ? "À venir" : "Passée"}</span>{" "}
         {article.categorie}

@@ -22,7 +22,7 @@ function lien(periode, categorie) {
 
 // ACT-3 : du plus récent au plus ancien, filtres « à venir » / « passées » et par catégorie.
 export default async function Actualites({ searchParams }) {
-  const { filtre = "toutes", categorie } = await searchParams;
+  const { filtre = "toutes", categorie, retire } = await searchParams;
   const [tous, categories, membre, edition] = await Promise.all([
     getArticlesPublies({ categorie }),
     getCategoriesPubliees(),
@@ -47,6 +47,11 @@ export default async function Actualites({ searchParams }) {
         )}
       </div>
       <p className="chapo">Les activités passées et à venir de l'association, en textes et en photos.</p>
+      {retire && edition && (
+        <div className="message-info" role="status" style={{ marginBottom: "1rem" }}>
+          L'actualité est retirée du site. Vous pouvez la republier depuis <a href="/admin/articles">la console</a>.
+        </div>
+      )}
 
       <nav className="filtres" aria-label="Filtrer par période">
         {periodes.map((f) => (
@@ -67,7 +72,7 @@ export default async function Actualites({ searchParams }) {
       {articles.length ? (
         <div className="grille">
           {articles.map((a) => (
-            <ArticleCard key={a.id} article={a} />
+            <ArticleCard key={a.id} article={a} edition={edition && peutPublier(membre)} />
           ))}
         </div>
       ) : (

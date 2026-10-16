@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { compteursSel } from "@/lib/sel/donnees";
 import { etatSel } from "@/lib/sel/acces";
+import BarreBasSel from "./BarreBasSel";
 import EnteteSel from "./EnteteSel";
 
 export const metadata = {
@@ -17,7 +18,7 @@ export default async function SelLayout({ children }) {
   const solde = ouvert ? etat.alias.soldeBriques : null;
 
   return (
-    <div className="sel">
+    <div className={`sel${ouvert ? " sel-ouvert" : ""}`}>
       <a href="#contenu" className="skip-link">Aller au contenu</a>
       <EnteteSel ouvert={ouvert} compteurs={compteurs} solde={solde} code={etat.membre?.alias?.code} />
       <main id="contenu" className="conteneur sel-contenu">{children}</main>
@@ -27,6 +28,7 @@ export default async function SelLayout({ children }) {
           <Link href="/le-sel">Comment ça marche ?</Link> · <Link href="/documents">Nos textes</Link> · <Link href="/">Site de l'association</Link>
         </span>
       </footer>
+      {ouvert && <BarreBasSel compteurs={compteurs} />}
     </div>
   );
 }

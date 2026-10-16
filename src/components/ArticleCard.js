@@ -1,7 +1,8 @@
 import Link from "next/link";
+import OutilsArticle from "@/components/OutilsArticle";
 import { estAVenir, formatDate } from "@/lib/format";
 
-export default function ArticleCard({ article }) {
+export default function ArticleCard({ article, edition = false }) {
   const aVenir = estAVenir(article.dateActivite);
   const couverture = article.medias?.[0];
   return (
@@ -21,6 +22,7 @@ export default function ArticleCard({ article }) {
         <Link href={`/actualites/${article.slug}`}>{article.titre}</Link>
       </h3>
       {article.extrait && <p>{article.extrait}</p>}
+      {edition && <OutilsArticle id={article.id} />}
     </article>
   );
 }

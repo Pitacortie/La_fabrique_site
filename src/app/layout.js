@@ -10,7 +10,11 @@ import "./globals.css";
 const antonio = Antonio({ subsets: ["latin"], variable: "--font-antonio", display: "swap" });
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat", display: "swap" });
 
+// Téléphone : barre du navigateur aux couleurs du site, contenu jusqu'aux bords (encoches gérées en CSS)
+export const viewport = { themeColor: "#3b7a96", viewportFit: "cover" };
+
 export const metadata = {
+  appleWebApp: { capable: true, title: "La Fabrique", statusBarStyle: "default" },
   title: { default: site.nom, template: `%s · ${site.nom}` },
   description: `${site.nom} : ${site.accroche.toLowerCase()}. Vie locale, entraide et initiatives habitantes.`,
 };
