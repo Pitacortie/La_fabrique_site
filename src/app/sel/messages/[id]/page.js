@@ -69,7 +69,7 @@ export default async function Conversation({ params }) {
                   <div className="sel-message-meta">
                     {moi ? "Vous" : autre.code} · {formatHorodatage(m.createdAt)}
                     {moi && m.luLe && " · lu"}
-                    {!moi && <> · <FormulaireSignalement messageId={m.id} libelle="signaler" /></>}
+                    {!moi && <FormulaireSignalement messageId={m.id} />}
                   </div>
                 </li>
               );

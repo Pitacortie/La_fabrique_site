@@ -39,7 +39,7 @@ export default function EnteteSel({ ouvert, compteurs, solde, code }) {
         {ouvert && (
           <>
             <Link href="/sel/briques" className="sel-solde" title="Mon solde de briques" aria-current={courant("/sel/briques")}>
-              <span aria-hidden="true">🧱</span> {solde} brique{Math.abs(solde) > 1 ? "s" : ""}
+              <span aria-hidden="true">🧱</span> {solde}<span className="sel-solde-libelle"> brique{Math.abs(solde) > 1 ? "s" : ""}</span>
             </Link>
             <button type="button" className="burger" aria-expanded={menu} aria-controls="sel-menu" onClick={() => setMenu((m) => !m)}>
               Menu

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { signalerSel } from "@/app/sel/actions/annonces";
 import { contacter } from "@/app/sel/actions/messagerie";
 import BoutonEnvoi from "@/components/BoutonEnvoi";
@@ -29,28 +29,58 @@ export function FormulaireContacter({ annonceId, code }) {
 }
 
 // MSG-7, NEU-4 : signaler une annonce ou un message à la modération
+// MSG-7, NEU-4 : signaler une annonce ou un message. Un petit bouton ouvre une fenêtre avec le motif.
 export function FormulaireSignalement({ annonceId, messageId, libelle = "Signaler" }) {
   const [etat, action] = useActionState(signalerSel, null);
-  const [ouvert, setOuvert] = useState(false);
-  if (etat?.ok) return <span className="meta" role="status">{etat.ok}</span>;
+  const fenetre = useRef(null);
+  const discret = !!messageId;
   return (
     <>
-      <button type="button" className="lien-action sel-signaler" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert}>
-        {libelle}
+      <button
+        type="button"
+        className={discret ? "sel-signaler-icone" : "lien-action sel-signaler"}
+        onClick={() => fenetre.current?.showModal()}
+        aria-haspopup="dialog"
+        aria-label={discret ? "Signaler ce message" : undefined}
+        title={discret ? "Signaler ce message" : undefined}
+      >
+        {discret ? <span aria-hidden="true">⚑</span> : libelle}
       </button>
-      <form action={action} hidden={!ouvert} className="sel-signalement">
-        {annonceId && <input type="hidden" name="annonceId" value={annonceId} />}
-        {messageId && <input type="hidden" name="messageId" value={messageId} />}
-        <Retour etat={etat} />
-        <select name="motif" required defaultValue="" aria-label="Motif du signalement">
-          <option value="" disabled>Motif…</option>
-          {Object.entries(libellesMotifSignalement).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
-          ))}
-        </select>
-        <input type="text" name="details" maxLength={1000} placeholder="Précisions (facultatif)" aria-label="Précisions" />
-        <BoutonEnvoi className="bouton bouton-secondaire" enCours="…">Envoyer le signalement</BoutonEnvoi>
-      </form>
+      <dialog ref={fenetre} className="dialogue-bug sel-dialogue-signalement" aria-label={discret ? "Signaler ce message" : libelle}>
+        <h2>{discret ? "Signaler ce message" : libelle}</h2>
+        {etat?.ok ? (
+          <>
+            <p className="message-info" role="status">{etat.ok}</p>
+            <div className="actions">
+              <button type="button" className="bouton" onClick={() => fenetre.current?.close()}>Fermer</button>
+            </div>
+          </>
+        ) : (
+          <form action={action} className="formulaire-bug">
+            {annonceId && <input type="hidden" name="annonceId" value={annonceId} />}
+            {messageId && <input type="hidden" name="messageId" value={messageId} />}
+            <Retour etat={etat} />
+            <p className="meta">Votre signalement est transmis à la modération, sans que l'autre personne le sache.</p>
+            <div className="champ">
+              <label htmlFor={`motif-${messageId ?? annonceId}`}>Motif</label>
+              <select id={`motif-${messageId ?? annonceId}`} name="motif" required defaultValue="">
+                <option value="" disabled>Choisissez…</option>
+                {Object.entries(libellesMotifSignalement).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div className="champ">
+              <label htmlFor={`details-${messageId ?? annonceId}`}>Précisions (facultatif)</label>
+              <textarea id={`details-${messageId ?? annonceId}`} name="details" maxLength={1000} rows={3} />
+            </div>
+            <div className="actions">
+              <BoutonEnvoi className="bouton" enCours="Envoi…">Envoyer le signalement</BoutonEnvoi>
+              <button type="button" className="bouton bouton-secondaire" onClick={() => fenetre.current?.close()}>Annuler</button>
+            </div>
+          </form>
+        )}
+      </dialog>
     </>
   );
 }

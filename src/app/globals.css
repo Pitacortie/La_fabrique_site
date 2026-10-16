@@ -491,8 +491,14 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 .sel-historique summary { cursor: pointer; color: var(--texte-doux); }
 .sel-historique .sel-etape { margin-top: 0.75rem; }
 .sel-signaler { font-size: 0.75rem; }
-.sel-signalement { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
-.sel-signalement select, .sel-signalement input { width: auto; flex: 1 1 10rem; font-size: 0.85rem; padding: 0.35rem 0.5rem; }
+/* Petit drapeau discret à côté de l'heure d'un message reçu ; plus visible au survol */
+.sel-signaler-icone {
+  margin-left: auto; font: inherit; font-size: 0.85rem; line-height: 1; cursor: pointer;
+  background: none; border: none; border-radius: 6px; padding: 0.2rem 0.35rem; color: var(--texte-doux); opacity: 0.55;
+}
+.sel-message:hover .sel-signaler-icone, .sel-signaler-icone:focus-visible { opacity: 1; }
+.sel-signaler-icone:hover { color: var(--erreur); background: rgb(163 54 28 / 0.08); }
+@media (hover: none) { .sel-signaler-icone { opacity: 0.8; padding: 0.35rem 0.5rem; } }
 
 .sel-echange-ligne p { margin: 0 0 0.4rem; }
 .sans-puces { list-style: none; padding: 0; margin: 0; }
@@ -602,7 +608,7 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
   .liste-def dd { margin-bottom: 0.6rem; overflow-wrap: anywhere; }
 
   /* 16 px minimum : sinon l'iPhone zoome sur le champ */
-  input, select, textarea, .sel-signalement select, .sel-signalement input { font-size: 16px; }
+  input, select, textarea { font-size: 16px; }
 
   /* Boutons pleine largeur dans les formulaires, plus faciles à toucher */
   .formulaire > .actions .bouton { flex: 1 1 100%; }
@@ -623,4 +629,17 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 
   .sel-message { max-width: 92%; }
   .sel-fiche h1 { font-size: 1.8rem; }
+}
+
+/* Petits téléphones (moins de 400 px) : l'en-tête du SEL tient sur une ligne, « Menu » reste collé à droite */
+.sel-barre > .marque { min-width: 0; }
+@media (max-width: 25rem) {
+  .sel-barre { gap: 0.5rem; }
+  .sel-entete .marque small { display: none; }
+  .sel-solde { padding: 0.3rem 0.6rem; }
+  .sel-solde-libelle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sel-entete .burger { padding: 0.45rem 0.75rem; }
+  .sel-onglet { font-size: 0.95rem; padding: 0.5rem 0.4rem; }
+  .entete .marque small { font-size: 0.7rem; }
+  .sel-barre-bas a { font-size: 0.62rem; }
 }
