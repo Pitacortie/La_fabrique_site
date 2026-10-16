@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { formatHorodatage } from "@/lib/heure-paris";
 import { exigerAccesSel } from "@/lib/sel/acces";
 import { conversationDe, mineurConcerne } from "@/lib/sel/conversations";
-import { RAISONS_LEVEE, anonymatLeve, libellesType, roles } from "@/lib/sel/regles";
+import { anonymatLeve, libellesType, roles } from "@/lib/sel/regles";
 import Echange from "./Echange";
 import { DefilerEnBas, FormulaireMessage, Rafraichir } from "./Fil";
 
@@ -104,11 +104,6 @@ export default async function Conversation({ params }) {
                   personne ou si un mineur est concerné, et c'est définitif. Vous pouvez aussi refuser, sans avoir à vous
                   justifier : l'échange se poursuit alors à distance.
                 </p>
-                <label htmlFor="raison" className="sr-only">Pourquoi révéler votre identité</label>
-                <select id="raison" name="raison" required defaultValue="">
-                  <option value="" disabled>Pourquoi ?</option>
-                  {Object.entries(RAISONS_LEVEE).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
                 <label className="case">
                   <input type="checkbox" name="confirmation" required />
                   <span>J'accepte de révéler mon identité à {autre.code}.</span>

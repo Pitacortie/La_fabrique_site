@@ -8,6 +8,8 @@ import { libellesModeReglement, modesReglementProposes } from "@/lib/site";
 import { deposerDemande } from "./actions";
 import { ChampDate } from "@/components/ChampsDate";
 
+const AGE_MINIMUM = 13;
+
 // Formulaire repris du bulletin d'adhésion 2026 (annexe G), dans le même ordre.
 // Deux étapes (ADH-16) : saisie, puis récapitulatif avant envoi. Les champs restent dans la page
 // pendant le récapitulatif (masqués) : c'est le même formulaire qui est envoyé.
@@ -82,7 +84,9 @@ export default function FormulaireAdhesion({ textes = {} }) {
   const [cases, setCases] = useState({});
   const [recap, setRecap] = useState(null); // null = étape 1 (saisie), sinon lignes du récapitulatif
 
-  const mineur = (age(dateNaissance) ?? 99) < 18;
+  const ageSaisi = age(dateNaissance);
+  const tropJeune = ageSaisi !== null && ageSaisi >= 0 && ageSaisi < AGE_MINIMUM;
+  const mineur = !tropJeune && (ageSaisi ?? 99) < 18;
   const coche = (nom) => (e) => setCases((c) => ({ ...c, [nom]: e.target.checked }));
   const pret = OBLIGATOIRES.every((n) => cases[n]);
 
@@ -96,6 +100,7 @@ export default function FormulaireAdhesion({ textes = {} }) {
 
   function verifier() {
     const form = formRef.current;
+    if (tropJeune) return form.querySelector("#dateNaissance")?.focus();
     if (!form.reportValidity()) return;
     setRecap(recapitulatif(form, mineur));
     form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -171,6 +176,11 @@ export default function FormulaireAdhesion({ textes = {} }) {
             <div className="champ">
               <label htmlFor="dateNaissance">Date de naissance (jj/mm/aaaa) <span className="obligatoire">*</span></label>
               <ChampDate id="dateNaissance" name="dateNaissance" required naissance onChange={setDateNaissance} autoComplete="bday" />
+              {tropJeune && (
+                <p className="message-erreur" role="alert" style={{ marginTop: "0.5rem" }}>
+                  L'adhésion est possible à partir de {AGE_MINIMUM} ans.
+                </p>
+              )}
             </div>
           </div>
           <div className="champs" style={{ marginTop: "1rem" }}>
@@ -311,7 +321,7 @@ export default function FormulaireAdhesion({ textes = {} }) {
         </fieldset>
 
         <div className="actions">
-          <button type="button" className="bouton" disabled={!pret} onClick={verifier}>
+          <button type="button" className="bouton" disabled={!pret || tropJeune} onClick={verifier}>
             Vérifier ma demande
           </button>
           {!pret && <span className="refs">Toutes les cases obligatoires doivent être cochées.</span>}

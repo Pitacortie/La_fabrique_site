@@ -544,14 +544,6 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
 .gazette-archives { padding-left: 1.2rem; }
 .gazette-archives li { margin: 0.3rem 0; }
 
-/* ---------- Déconnexion automatique (ACC-4) ---------- */
-.garde-session {
-  position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 200;
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; max-width: calc(100vw - 2rem);
-  background: var(--surface); border: 2px solid var(--terracotta); border-radius: var(--rayon);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); padding: 0.9rem 1.2rem;
-}
-.garde-session p { margin: 0; }
 
 .sel-citation { margin: 1.5rem 0 0; padding: 1rem 1.25rem; border-left: 4px solid var(--terracotta); background: var(--surface);
   font-style: italic; font-weight: 600; border-radius: 0 var(--rayon) var(--rayon) 0; }
@@ -585,7 +577,7 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
   .sel-onglets-barre .bouton { display: none; }
   .sel-onglets { width: 100%; }
   .sel-onglet { flex: 1; text-align: center; }
-  .sel-ouvert .bouton-bug, .sel-ouvert .garde-session { bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px)); }
+  .sel-ouvert .bouton-bug { bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px)); }
   .sel-messages { max-height: 55dvh; }
 }
 
@@ -620,7 +612,6 @@ body:has(.barre-edition) .bouton-bug { bottom: calc(5rem + env(safe-area-inset-b
   .bouton-bug { width: 2.75rem; height: 2.75rem; padding: 0; right: 0.75rem; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); font-size: 1.1rem; opacity: 0.9; }
   .bouton-bug-texte { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  .garde-session { left: 0.75rem; right: 0.75rem; transform: none; max-width: none; }
   .barre-edition { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
 
   /* Agenda : le calendrier tient dans l'écran, les événements sont des points (le détail est dans la liste) */

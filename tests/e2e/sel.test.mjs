@@ -285,14 +285,14 @@ describe("SEL : messagerie, anonymat et échange complet en briques", () => {
   it("levée d'anonymat : visible seulement quand les deux ont accepté, et journalisée (section 6.5)", async () => {
     const auteur = await membre("selUn");
     const interlocuteur = await membre("selDeux");
-    await deux.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on", raison: "presentiel" });
+    await deux.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on" });
     expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).not.toContain(`${auteur.prenom} ${auteur.nom}`);
-    await un.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on", raison: "presentiel" });
+    await un.soumettre(`/sel/messages/${idConv}`, 'name="confirmation"', { confirmation: "on" });
     expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).toContain(`${auteur.prenom} ${auteur.nom}`);
     expect(texteVisible((await un.page(`/sel/messages/${idConv}`)).html)).toContain(`${interlocuteur.prenom} ${interlocuteur.nom}`);
     const trace = await prisma.journalAudit.findFirst({ where: { action: "sel.anonymat_leve", cibleId: idConv } });
-    // Qui, quand, pourquoi ; nom, prénom et adresse révélés
-    expect(trace).toMatchObject({ acteurId: auteur.id, motif: "Rencontre en personne" });
+    // Qui et quand ; nom, prénom et adresse révélés
+    expect(trace.acteurId).toBe(auteur.id);
     expect(texteVisible((await deux.page(`/sel/messages/${idConv}`)).html)).toContain(auteur.adresse);
   });
 

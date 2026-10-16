@@ -65,12 +65,5 @@ export function duree(minutes) {
   return h ? `${h} h${m ? ` ${String(m).padStart(2, "0")}` : ""}` : `${m} min`;
 }
 
-// Raison de la levée d'anonymat, conservée au journal
-export const RAISONS_LEVEE = {
-  presentiel: "Rencontre en personne",
-  mineur: "Un mineur est concerné",
-  autre: "Autre raison",
-};
-
 // La levée d'anonymat est faite quand les deux parties ont donné leur accord (section 6.5).
 export const anonymatLeve = (conversation) => !!(conversation.accordAuteurLe && conversation.accordInterlocuteurLe);

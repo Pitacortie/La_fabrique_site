@@ -76,7 +76,7 @@ Les courriels sont lus dans le journal du serveur de test (`tests/.tmp/serveur.l
 | `tests/unit/*` | adresses d'articles, dates, limites de débit, IP derrière un proxy, chemins des photos, courriels |
 | `pages-publiques` | toutes les pages, 404, en-têtes de sécurité, polices locales, textes officiels, filtres |
 | `acces` | qui peut ouvrir quelle page (visiteur, adhérent, administrateur, Bureau) |
-| `connexion` | identifiants, limites d'essais, déconnexion après 5 minutes d'inactivité, redirections |
+| `connexion` | identifiants, limites d'essais, « rester connecté », redirections, déconnexion |
 | `mots-de-passe` | changement, mot de passe oublié, liens à usage unique et expirés |
 | `coordonnees` | validation, droit à l'image journalisé |
 | `edition` | crayons ✏️, Nos initiatives, requêtes rejouées par un non-admin |
@@ -181,7 +181,7 @@ src/
 - **Acceptations versionnées** : chaque case cochée crée une `Acceptation` liée à une version précise de `TexteJuridique`.
 - **Aucun paiement en ligne** : la cotisation est saisie par un administrateur (`Cotisation.saisieParId`).
 - **Droits** : tous les administrateurs (membres du Bureau compris) ont les mêmes droits ; seuls eux publient au nom de l'association.
-- **Sessions** : déconnexion après 5 minutes sans activité (la page envoie un signal tant qu'on s'en sert) et à la fermeture du navigateur.
+- **Sessions** : « Rester connecté » garde la session 30 jours (cookie persistant) ; sinon elle s'arrête à la fermeture du navigateur (12 heures au plus). « Sortir » la ferme.
 - **Traçabilité** : décisions d'adhésion, accès aux identités et publications passent par `JournalAudit`.
 - **Neutralité** : aucun contenu partisan ou électoral (statuts, art. 3 et 19).
 - **Photos et gazette** : stockées dans `uploads/` (hors git), servies par `/medias/…` (WebP et PDF). En production, ce dossier doit être sur un disque persistant. Texte alternatif facultatif, pas de case « autorisation » par photo (accord verbal avant la prise de vue, puis accord à l'inscription).

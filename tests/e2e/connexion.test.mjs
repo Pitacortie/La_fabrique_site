@@ -62,42 +62,35 @@ describe("connexion (CON-1 à CON-5)", () => {
     expect(dernier.message).toMatch(/Trop de tentatives/);
   });
 
-  it("plus de « rester connecté » : le cookie est effacé à la fermeture du navigateur (ACC-4)", async () => {
-    const nav = new Navigateur();
-    const { html } = await nav.page("/connexion");
-    expect(html).not.toContain('name="resterConnecte"');
-    const donnees = await nav.formulaire("/connexion", 'name="motDePasse"');
-    donnees.set("email", COMPTES.adherent.email);
-    donnees.set("motDePasse", COMPTES.adherent.motDePasse);
-    const r = await nav.requete("/connexion", { method: "POST", body: donnees });
-    expect(r.headers.get("set-cookie")).not.toMatch(/Expires=|Max-Age=/i);
+  it("« Rester connecté » donne un cookie de 30 jours, sinon un cookie effacé à la fermeture", async () => {
+    const lireCookie = async (rester) => {
+      const nav = new Navigateur();
+      const donnees = await nav.formulaire("/connexion", 'name="motDePasse"');
+      donnees.set("email", COMPTES.adherent.email);
+      donnees.set("motDePasse", COMPTES.adherent.motDePasse);
+      if (rester) donnees.set("resterConnecte", "on");
+      const r = await nav.requete("/connexion", { method: "POST", body: donnees });
+      return r.headers.get("set-cookie");
+    };
+    expect(await lireCookie(false)).not.toMatch(/Expires=/i);
+    const expire = new Date(/Expires=([^;]+)/i.exec(await lireCookie(true))[1]);
+    const jours = (expire - Date.now()) / 86_400_000;
+    expect(jours).toBeGreaterThan(29);
+    expect(jours).toBeLessThan(31);
   });
 
-  it("la session expire après 5 minutes sans activité, et chaque visite la prolonge (ACC-4)", async () => {
-    const avant = new Date();
-    const nav = await new Navigateur().connexion(COMPTES.adherent);
-    const session = await prisma.session.findFirst({ where: { createdAt: { gte: avant } }, orderBy: { createdAt: "desc" } });
-    expect(Math.round((session.expireLe - session.createdAt) / 60_000)).toBe(5);
-
-    // Échéance proche : une visite la repousse à 5 minutes
-    await prisma.session.update({ where: { id: session.id }, data: { expireLe: new Date(Date.now() + 60_000) } });
+  it("avec « Rester connecté », on retrouve sa session à la visite suivante ; « Sortir » la ferme", async () => {
+    const nav = await new Navigateur().connexion(COMPTES.adherent, { resterConnecte: true });
     expect((await nav.page("/espace")).status).toBe(200);
-    const prolongee = await prisma.session.findUnique({ where: { id: session.id } });
-    expect((prolongee.expireLe - Date.now()) / 60_000).toBeGreaterThan(4);
-
-    // Le signal d'activité de la page prolonge aussi la session
-    await prisma.session.update({ where: { id: session.id }, data: { expireLe: new Date(Date.now() + 60_000) } });
-    expect((await nav.requete("/api/session", { method: "POST" })).status).toBe(200);
-    expect(((await prisma.session.findUnique({ where: { id: session.id } })).expireLe - Date.now()) / 60_000).toBeGreaterThan(4);
-
-    // Plus de 5 minutes sans activité : déconnecté
-    await prisma.session.update({ where: { id: session.id }, data: { expireLe: new Date(Date.now() - 1000) } });
-    expect((await nav.page("/espace")).location).toMatch(/^\/connexion/);
-    expect((await nav.requete("/api/session", { method: "POST" })).status).toBe(401);
+    const session = await prisma.session.findFirst({ where: { membre: { email: COMPTES.adherent.email } }, orderBy: { createdAt: "desc" } });
+    expect(Math.round((session.expireLe - session.createdAt) / 86_400_000)).toBe(30);
   });
 
-  it("la page de connexion explique une déconnexion pour inactivité", async () => {
-    expect(texteVisible((await new Navigateur().page("/connexion?expire=1")).html)).toContain("déconnecté après 5 minutes sans activité");
+  it("la session courte expire en base après 12 heures", async () => {
+    const avant = new Date();
+    await new Navigateur().connexion(COMPTES.adherent);
+    const session = await prisma.session.findFirst({ where: { createdAt: { gte: avant } }, orderBy: { createdAt: "desc" } });
+    expect(Math.round((session.expireLe - session.createdAt) / 3_600_000)).toBe(12);
   });
 
   it("le paramètre « suite » ne permet pas de rediriger vers un autre site", async () => {

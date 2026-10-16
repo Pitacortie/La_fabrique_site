@@ -6,25 +6,29 @@ import { prisma } from "@/lib/db";
 
 // Sessions côté serveur : le cookie contient un jeton aléatoire, la base n'en garde que le hachage.
 export const COOKIE_SESSION = "fabrique_session";
-// ACC-4 : déconnexion automatique après plus de 5 minutes d'inactivité, ou à la fermeture de la page.
-// Chaque requête (et le signal envoyé par la page tant qu'on s'en sert) repousse l'échéance de 5 minutes.
-export const INACTIVITE_MS = 5 * 60 * 1000;
-// Garde-fou : une session ne dure jamais plus de 12 heures, même active.
-const DUREE_MAX_MS = 12 * 60 * 60 * 1000;
-// On n'écrit en base que si l'échéance a avancé d'au moins 30 secondes (évite une écriture par requête).
-const PAS_PROLONGATION_MS = 30 * 1000;
+const HEURE = 60 * 60 * 1000;
+// « Rester connecté » : on retrouve sa session à la prochaine visite, pendant 30 jours, sauf si on a cliqué « Sortir ».
+const DUREE_LONGUE_MS = 30 * 24 * HEURE;
+// Sinon : jusqu'à la fermeture du navigateur, et au plus 12 heures.
+const DUREE_COURTE_MS = 12 * HEURE;
 
 const hacher = (jeton) => createHash("sha256").update(jeton).digest("hex");
 
 export const ROLES_ADMIN = ["ADMINISTRATEUR", "BUREAU"];
 
-export async function creerSession(membreId) {
+export async function creerSession(membreId, { resterConnecte = false } = {}) {
   const jeton = randomBytes(32).toString("base64url");
-  const expireLe = new Date(Date.now() + INACTIVITE_MS);
+  const expireLe = new Date(Date.now() + (resterConnecte ? DUREE_LONGUE_MS : DUREE_COURTE_MS));
   await prisma.session.create({ data: { id: hacher(jeton), membreId, expireLe } });
   const jar = await cookies();
-  // Cookie de session, sans date d'expiration : le navigateur l'efface à sa fermeture.
-  jar.set(COOKIE_SESSION, jeton, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+  jar.set(COOKIE_SESSION, jeton, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    // Sans date d'expiration, le navigateur efface le cookie à sa fermeture (cookie de session).
+    ...(resterConnecte ? { expires: expireLe } : {}),
+  });
 }
 
 export async function supprimerSession() {
@@ -55,17 +59,11 @@ export const getMembreConnecte = cache(async function getMembreConnecte() {
     include: { membre: { include: { alias: true } } },
   });
   if (!session) return null;
-  const maintenant = Date.now();
-  if (session.expireLe.getTime() < maintenant || maintenant - session.createdAt.getTime() > DUREE_MAX_MS) {
+  if (session.expireLe < new Date()) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;
   }
   if (session.membre.statut !== "ACTIF") return null;
-  // Activité : l'échéance est repoussée de 5 minutes
-  const echeance = maintenant + INACTIVITE_MS;
-  if (echeance - session.expireLe.getTime() > PAS_PROLONGATION_MS) {
-    await prisma.session.update({ where: { id: session.id }, data: { expireLe: new Date(echeance) } }).catch(() => {});
-  }
   return session.membre;
 });
 

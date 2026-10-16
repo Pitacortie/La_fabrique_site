@@ -7,7 +7,7 @@ export const metadata = { title: "Connexion" };
 
 // CON-1 à CON-5.
 export default async function Connexion({ searchParams }) {
-  const { suite, reinitialise, email, expire } = await searchParams;
+  const { suite, reinitialise, email } = await searchParams;
   if (await getMembreConnecte()) redirect("/espace");
 
   return (
@@ -17,11 +17,6 @@ export default async function Connexion({ searchParams }) {
       {suite?.startsWith("/sel") && (
         <div className="encart" style={{ marginBottom: "1rem" }}>
           Le SEL est réservé aux adhérents : connectez-vous pour y accéder. <Link href="/le-sel">Découvrir le SEL →</Link>
-        </div>
-      )}
-      {expire && (
-        <div className="message-info" role="status" style={{ marginBottom: "1rem" }}>
-          Vous avez été déconnecté après 5 minutes sans activité. Reconnectez-vous pour continuer.
         </div>
       )}
       {reinitialise && (

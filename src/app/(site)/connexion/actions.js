@@ -60,7 +60,7 @@ export async function seConnecter(_etat, formData) {
   reinitialiser(cleIp);
   reinitialiser(cleCompte);
   await prisma.membre.update({ where: { id: membre.id }, data: { derniereConnexion: new Date() } });
-  await creerSession(membre.id);
+  await creerSession(membre.id, { resterConnecte: formData.get("resterConnecte") === "on" });
   redirect(destinationSure(suite));
 }
 
